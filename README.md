@@ -11,10 +11,10 @@ Developed using:
 - MERG CANUSB CAN bus USB interface
 - MERG FLiM Configuration Utility
 
-## [CbusLibXC8](https://github.com/Syspixie/CbusLibXC8/tree/master/CbusLibXC8.X)
+## [CbusLibXC8](https://github.com/Syspixie/CbusLibXC8/tree/main/CbusLibXC8.X)
 
 Code to provide basic CBUS functionality for PIC18F2xK80 MCUs.
 
-## [CbusLibBootXC8](https://github.com/Syspixie/CbusLibXC8/tree/master/CbusLibBootXC8.X)
+## [CbusLibBootXC8](https://github.com/Syspixie/CbusLibXC8/tree/main/CbusLibBootXC8.X)
 
 Code to provide bootloader functionality for a CbusLibXC8 application.
