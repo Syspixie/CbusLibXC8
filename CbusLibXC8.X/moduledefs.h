@@ -87,7 +87,7 @@ extern "C" {
 
 #define MAJOR_VERSION 1
 #define MINOR_VERSION 'a'
-#define BETA_VERSION 5                  // 0: production
+#define BETA_VERSION 0                  // 0: production
 
 #define CURRENT_EEPROM_VERSION 1
 #define CURRENT_FLASH_VERSION 1
