@@ -185,22 +185,30 @@ void delayMillisShort(uint16_t ms) {
 // <editor-fold defaultstate="expanded" desc="Interrupt service routines">
 
 
-#if defined(CPU_FAMILY_PIC18_K83)
 /**
  * Called on TMR0 interrupt.
  */
+#if defined(CPU_FAMILY_PIC18_K80)
+void TMR0_ISR() {
+#endif
+#if defined(CPU_FAMILY_PIC18_K83)
 void __interrupt(irq(TMR0), base(IVT_BASE_ADDRESS), low_priority) TMR0_ISR() {
+#endif
 
     // Increment timer/counter value
     ++millisTicks.value;
 
     // Clear interrupt flag
+#if defined(CPU_FAMILY_PIC18_K80)
+    INTCONbits.TMR0IF = 0;
+#endif
+#if defined(CPU_FAMILY_PIC18_K83)
     PIR3bits.TMR0IF = 0;
+#endif
 
     // Call application 'tick' ISRs.
     moduleTimerIsr();
 }
-#endif
 
 #if defined(CPU_FAMILY_PIC18_K80)
 /**
