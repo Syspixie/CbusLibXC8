@@ -74,11 +74,6 @@
 #include "module.h"
 
 
-#if defined(CPU_FAMILY_PIC18_K83)
-#define IVT_BASE_ADDRESS (APPLICATION_BASE_ADDRESS + 0x08)
-#endif
-
-
 /**
  * Application entry point.
  */
@@ -89,8 +84,16 @@ void __section("mainSec") main() {
 #endif
 #if defined(CPU_FAMILY_PIC18_K83)
     INTCON0bits.IPEN = 1;           // Enable high/low interrupt priorities
-    
+
+    IVTLOCK = 0x55;
+    IVTLOCK = 0xAA;
+    IVTLOCKbits.IVTLOCKED = 0x00;   // unlock IVT
+
     IVTBASE = IVT_BASE_ADDRESS;     // Move the IVT (Interrupt Vector Table)
+
+    IVTLOCK = 0x55;
+    IVTLOCK = 0xAA;
+    IVTLOCKbits.IVTLOCKED = 0x01;   // lock IVT
 #endif
 
     initPorts();
@@ -103,15 +106,11 @@ void __section("mainSec") main() {
 // <editor-fold defaultstate="expanded" desc="Interrupt service routines">
 
 
+#if defined(CPU_FAMILY_PIC18_K80)
 /**
  * High priority interrupt service handler.
  */
-#if defined(CPU_FAMILY_PIC18_K80)
 void __interrupt(high_priority) __section("mainSec") isrHigh() {
-#endif
-#if defined(CPU_FAMILY_PIC18_K83)
-void __interrupt(high_priority, base(0x0808)) isrHigh() {
-#endif
 
     moduleHighPriorityIsr();
 }
@@ -119,15 +118,14 @@ void __interrupt(high_priority, base(0x0808)) isrHigh() {
 /**
  * Low priority interrupt service handler.
  */
-#if defined(CPU_FAMILY_PIC18_K80)
 void __interrupt(low_priority) __section("mainSec") isrLow() {
-#endif
-#if defined(CPU_FAMILY_PIC18_K83)
-void __interrupt(low_priority, base(0x0808)) isrLow() {
-#endif
 
     moduleLowPriorityIsr();
 }
+#endif
+#if defined(CPU_FAMILY_PIC18_K83)
+void __interrupt(irq(default), base(IVT_BASE_ADDRESS)) Default_ISR() {}
+#endif
 
 
 // </editor-fold>

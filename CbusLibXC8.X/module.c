@@ -341,6 +341,7 @@ void nodeVarChanged(uint8_t varIndex, uint8_t oldValue, uint8_t newValue) {
 // <editor-fold defaultstate="expanded" desc="Interrupt service routines">
 
 
+#if defined(CPU_FAMILY_PIC18_K80)
 /**
  * Called on high priority interrupt.
  */
@@ -355,12 +356,18 @@ void moduleLowPriorityIsr(void) {
     // Process ECAN interrupts
     cbusCanIsr();
     
-    // Process TIMER0 interrupts; if 'ticked'...
-    if (millisIsr()) {
-        
-        cbusCanTimerIsr();     // Process 'tick' CAN bus operations
-        interactTimerIsr();    // Process 'tick' button and LED operations
-    }
+    // Process TMR0 interrupts
+    millisIsr();
+}
+#endif
+
+/**
+ * Called when the timer 'ticks'.
+ */
+void moduleTimerIsr() {
+
+    cbusCanTimerIsr();     // Process 'tick' CAN bus operations
+    interactTimerIsr();    // Process 'tick' button and LED operations
 }
 
 

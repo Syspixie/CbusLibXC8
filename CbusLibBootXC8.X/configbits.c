@@ -145,7 +145,7 @@
 // CONFIG2L
 #pragma config MCLRE = EXTMCLR  // MCLR Enable bit->If LVP = 0, MCLR pin is MCLR; If LVP = 1, RE3 pin function is MCLR 
 #pragma config PWRTS = PWRT_64  // Power-up timer selection bits->PWRT set at 64ms
-#pragma config MVECEN = OFF     // Multi-vector enable bit->Interrupt contoller does not use vector table to prioritze interrupts
+#pragma config MVECEN = ON      // Multi-vector enable bit->Multi-vector enabled, Vector table used for interrupts
 #pragma config IVT1WAY = OFF    // IVTLOCK bit One-way set enable bit->IVTLOCK bit can be cleared and set repeatedly
 #pragma config LPBOREN = ON     // Low Power BOR Enable bit->ULPBOR enabled
 #pragma config BOREN = SBORDIS  // Brown-out Reset Enable bits->Brown-out Reset enabled , SBOREN bit is ignored

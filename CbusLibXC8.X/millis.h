@@ -80,7 +80,9 @@ extern "C" {
     uint16_t getMillisShort(void);
     void delayMillis(uint32_t ms);
     void delayMillisShort(uint16_t ms);
-    bool millisIsr(void);
+#if defined(CPU_FAMILY_PIC18_K80)
+    void millisIsr(void);
+#endif
 
 
 #ifdef	__cplusplus

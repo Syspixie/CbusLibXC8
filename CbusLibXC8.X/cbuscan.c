@@ -108,15 +108,17 @@
 
 
 // CAN ID self-enumeration process state
+
 typedef enum {
-    selfEnumIsInactive,     // No self-enumeration
-    selfEnumIsPending,      // Self-enumeration to start after 'holdoff' time
-    selfEnumIsRequested,    // Self-enumeration to start ASAP
-    selfEnumIsInProgress    // Self-enumeration in progress
+    selfEnumIsInactive, // No self-enumeration
+    selfEnumIsPending, // Self-enumeration to start after 'holdoff' time
+    selfEnumIsRequested, // Self-enumeration to start ASAP
+    selfEnumIsInProgress // Self-enumeration in progress
 } enum_t;
 
 // ECANCON register EWIN<4:0> bits determine which RX/TX buffer is mapped into
 // the Access Bank address (EWIN_ADDRESS)
+
 typedef enum {
     ewinTX = 0b00011,
     ewinTXB0 = 0b00011,
@@ -134,7 +136,9 @@ typedef enum {
 } ewin_t;
 
 // RX/TX buffer location names mapped to the Access Bank address EWIN_ADDRESS
+
 volatile struct {
+
     union {
         uint8_t CON;
         RXB0CONbits_t RXCONbits;
@@ -144,6 +148,7 @@ volatile struct {
     uint8_t SIDL;
     uint8_t EIDH;
     uint8_t EIDL;
+
     union {
         uint8_t DLC;
         B0DLCbits_t DLCbits;
@@ -153,10 +158,11 @@ volatile struct {
 
 
 // extern
-uint8_t canBusID;       // CBUS 7-bit CAN ID
-uint8_t cbusMsg[8];     // CBUS message (8 bytes)
+uint8_t canBusID; // CBUS 7-bit CAN ID
+uint8_t cbusMsg[8]; // CBUS message (8 bytes)
 #ifdef INCLUDE_CBUS_CAN_STATS
-volatile stats_t stats = {.bytes = {[0 ... sizeof(stats.bytes) - 1] = 0}};
+volatile stats_t stats = {.bytes =
+    {[0 ... sizeof (stats.bytes) - 1] = 0}};
 #endif
 
 
@@ -166,7 +172,7 @@ volatile uint8_t rxFifoNewest = 0;
 volatile uint8_t rxFifoOldest = 0;
 
 // Transmit software FIFO
-volatile canFrame_t txFifo[TX_FIFO_LENGTH];     // Transmit FIFO
+volatile canFrame_t txFifo[TX_FIFO_LENGTH]; // Transmit FIFO
 volatile uint8_t txFifoNewest = 0;
 volatile uint8_t txFifoOldest = 0;
 
@@ -178,27 +184,26 @@ uint16_t txb0StartedMillis;
 uint16_t txb1StartedMillis;
 uint16_t txb2StartedMillis;
 
-enum_t selfEnumStatus = selfEnumIsInactive;         // Self-enumeration state
-bool selfEnumSendResult = false;                    // Send result flag
-uint16_t selfEnumStartedMillis;                     // Self-enumeration start time
-uint8_t selfEnumBitmap[CBUSCAN_ENUM_BITMAP_SIZE];   // Bitmap of 'seen' CAN IDs
-
+enum_t selfEnumStatus = selfEnumIsInactive; // Self-enumeration state
+bool selfEnumSendResult = false; // Send result flag
+uint16_t selfEnumStartedMillis; // Self-enumeration start time
+uint8_t selfEnumBitmap[CBUSCAN_ENUM_BITMAP_SIZE]; // Bitmap of 'seen' CAN IDs
 
 /**
  * Initialises the CAN bus peripheral.
  */
 void initCbusCan() {
 
-// <editor-fold defaultstate="expanded" desc="ECAN configuration">
+    // <editor-fold defaultstate="expanded" desc="ECAN configuration">
 
     CANCON = 0x80;
     while ((CANSTAT & 0xE0) != 0x80); // wait until ECAN is in config mode
 
-    ECANCON = 0b10100000;   // CAN mode 2; FIFOWM when one receive buffer remains
-    BSEL0 = 0b00000000;     // All programmable buffers receive
+    ECANCON = 0b10100000; // CAN mode 2; FIFOWM when one receive buffer remains
+    BSEL0 = 0b00000000; // All programmable buffers receive
 
 #if defined(CPU_FAMILY_PIC18_K80)
-    CIOCON = 0b00100000;    // TX drives Vdd when recessive
+    CIOCON = 0b00100000; // TX drives Vdd when recessive
 #endif
 #if defined(CPU_FAMILY_PIC18_K83)
     CIOCON = 0b00000000;
@@ -208,17 +213,17 @@ void initCbusCan() {
     RXM0EIDH = 0;
     RXM0EIDL = 0;
     RXM0SIDH = 0;
-    RXM0SIDL = 0b00001000;  // Messages selected by the EXIDEN bit in RXFnSIDL will be accepted
+    RXM0SIDL = 0b00001000; // Messages selected by the EXIDEN bit in RXFnSIDL will be accepted
     RXM1EIDH = 0;
     RXM1EIDL = 0;
     RXM1SIDH = 0;
-    RXM1SIDL = 0b00001000;  // Messages selected by the EXIDEN bit in RXFnSIDL will be accepted
+    RXM1SIDL = 0b00001000; // Messages selected by the EXIDEN bit in RXFnSIDL will be accepted
 
     // Receive filters
     RXF0EIDH = 0;
     RXF0EIDL = 0;
     RXF0SIDH = 0;
-    RXF0SIDL = 0b10000000;  // Filter will only accept standard ID messages
+    RXF0SIDL = 0b10000000; // Filter will only accept standard ID messages
     RXF1EIDH = 0;
     RXF1EIDL = 0;
     RXF1SIDH = 0;
@@ -256,36 +261,44 @@ void initCbusCan() {
     MSEL2 = 0;
     MSEL3 = 0;
 
-    BRGCON1 = 0b00001111;   // Sync 1xTQ; Baud rate 125kbps
-    BRGCON2 = 0b10011110;   // Segment 1 4xTQ; propagation 7xTQ
-    BRGCON3 = 0b00000011;   // Segment 2 4xTQ
+    BRGCON1 = 0b00001111; // Sync 1xTQ; Baud rate 125kbps
+    BRGCON2 = 0b10011110; // Segment 1 4xTQ; propagation 7xTQ
+    BRGCON3 = 0b00000011; // Segment 2 4xTQ
 
     CANCON = 0x00;
     while ((CANSTAT & 0xE0) != 0x00); // wait until ECAN is in Normal mode
 
-// </editor-fold>
+    // </editor-fold>
 
     IPR5bits.IRXIP = 0;
     PIR5bits.IRXIF = 0;
-    PIE5bits.IRXIE = 1;     // Bus error received interrupt
+    PIE5bits.IRXIE = 1; // Bus error received interrupt
 
     IPR5bits.ERRIP = 0;
     PIR5bits.ERRIF = 0;
-    PIE5bits.ERRIE = 1;     // Bus error interrupt
+    PIE5bits.ERRIE = 1; // Bus error interrupt
+
+    TXB0CONbits.TXBIF = 0;
+    TXBIEbits.TXB0IE = 1; // TXB0 interrupt
+
+    TXB1CONbits.TXBIF = 0;
+    TXBIEbits.TXB1IE = 1; // TXB1 interrupt
+
+    TXB2CONbits.TXBIF = 0;
+    TXBIEbits.TXB2IE = 1; // TXB2 interrupt
 
     IPR5bits.TXBnIP = 0;
     PIR5bits.TXBnIF = 0;
-    PIE5bits.TXBnIE = 1;    // Mode 2 transmit interrupt
-    TXBIE = 0b00011100;     // All three TX buffers trigger TXBn interrupt
+    PIE5bits.TXBnIE = 1; // Mode 2 transmit interrupt
 
     IPR5bits.RXBnIP = 0;
     PIR5bits.RXBnIF = 0;
-    PIE5bits.RXBnIE = 1;    // Mode 2 receive interrupt
+    PIE5bits.RXBnIE = 1; // Mode 2 receive interrupt
 
     IPR5bits.FIFOWMIP = 0;
     PIR5bits.FIFOWMIF = 0;
-    PIE5bits.FIFOWMIE = 1;  // High water interrupt (one FIFO buffer remaining)
-    
+    PIE5bits.FIFOWMIE = 1; // High water interrupt (one FIFO buffer remaining)
+
     // Clear RX buffer control registers
     for (uint8_t i = 0; i <= 7; ++i) {
         ECANCONbits.EWIN = ewinRxFifo | i;
@@ -294,11 +307,11 @@ void initCbusCan() {
 
     // Configure TX buffer control registers
     ECANCONbits.EWIN = ewinTXB0;
-    ewin.CON = 0b00000000;          // Priority 0 (lowest)
+    ewin.CON = 0b00000000; // Priority 0 (lowest)
     ECANCONbits.EWIN = ewinTXB1;
-    ewin.CON = 0b00000010;          // Priority 2
+    ewin.CON = 0b00000010; // Priority 2
     ECANCONbits.EWIN = ewinTXB2;
-    ewin.CON = 0b00000011;          // Priority 3 (highest)
+    ewin.CON = 0b00000011; // Priority 3 (highest)
 
     // Encode the initial CAN ID
     encodedCanBusID.value = (uint16_t) (CAN_BUS_ID_UPPER_BITS | canBusID) << 5;
@@ -306,7 +319,6 @@ void initCbusCan() {
 
 
 // <editor-fold defaultstate="expanded" desc="Interrupt service routines">
-
 
 /**
  * Checks for transmit buffer errors, and abort the transmit if found.
@@ -322,7 +334,7 @@ static void txCheckErrorsIsr() {
 #ifdef INCLUDE_CBUS_CAN_STATS
             ++stats.txBusErr;
 #endif
-            ewin.TXCONbits.TXREQ = 0;   // Abort TX
+            ewin.TXCONbits.TXREQ = 0; // Abort TX
         }
     }
 }
@@ -388,102 +400,6 @@ static void rxNextIsr() {
 }
 
 /**
- * Service routine for ECAN interrupts.
- */
-void cbusCanIsr() {
-
-    // Handle bus error received interrupt
-    if (PIR5bits.IRXIF) {
-#ifdef INCLUDE_CBUS_CAN_STATS
-        ++stats.busInvMsg;
-#endif
-        txCheckErrorsIsr();
-
-        // Clear interrupt flag
-        PIR5bits.IRXIF = 0;
-    }
-
-    // Handle bus error interrupt
-    if (PIR5bits.ERRIF) {
-
-        // Clear RX FIFO full error
-        if (COMSTATbits.RXBNOVFL) {
-#ifdef INCLUDE_CBUS_CAN_STATS
-            ++stats.rxHwFifoFull;
-#endif
-            COMSTATbits.RXBNOVFL = 0;
-        }
-
-        // Clear interrupt flag
-        PIR5bits.ERRIF = 0;
-    }
-
-    // Handle transmit interrupt (one interrupt for all 3 TX buffers)
-    if (PIR5bits.TXBnIF) {
-
-        // Loop through TX buffers looking for the source of the interrupt
-        for (uint8_t i = 0; i < 3; ++i) {
-            ECANCONbits.EWIN = ewinTX + i;
-            if (ewin.TXCONbits.TXBIF) {
-
-                // Transmit finished
-#ifdef INCLUDE_CBUS_CAN_STATS
-                ++stats.txMsgCount;
-#endif
-                ewin.TXCONbits.TXBIF = 0;
-
-                // If TXB0, and FIFO not empty, start the next transmit
-                if (i == 0 && TX_FIFO_CUR_LENGTH > 0) txb0NextIsr();
-            }
-        }
-
-        // Clear interrupt flag
-        PIR5bits.TXBnIF = 0;
-    }
-
-    // Handle RX FIFO high water interrupt
-    if (PIR5bits.FIFOWMIF) {
-
-        // It was found that allowing the hardware FIFO to fill up, and not have
-        // any space in the software FIFO, the system would 'lock up' until
-        // restarted.  Clearing a bit of space in the software FIFO stops this
-        // from happening; reducing the FIFO queue so that there are at least
-        // 3 free entries appears to work well.  Doing this my changing
-        // rxFifoNewest might appear illogical, but it retains the thread safe
-        // nature of the FIFO.
-        while (RX_FIFO_CUR_LENGTH > RX_FIFO_WM_TARGET_LENGTH) {
-            --rxFifoNewest;
-#ifdef INCLUDE_CBUS_CAN_STATS
-            --stats.rxFifoUsed;
-            --stats.rxMsgCount;
-            ++stats.rxMsgDiscarded;
-#endif
-        }
-
-        // Clear interrupt flag
-        PIR5bits.FIFOWMIF = 0;
-    }
-
-    // Handle receive interrupt (one interrupt for all 8 RX buffers)
-    if (PIR5bits.RXBnIF) {
-
-        // Loop for all used RX FIFO buffers, and room in the software FIFO
-        while (COMSTATbits.NOT_FIFOEMPTY && RX_FIFO_CUR_LENGTH < RX_FIFO_LENGTH) {
-            ECANCONbits.EWIN = ewinRxFifo | (CANCON & 0x07);
-
-            // Get the received data
-            rxNextIsr();
-#ifdef INCLUDE_CBUS_CAN_STATS
-            ++stats.rxMsgCount;
-#endif
-        }
-
-        // Clear interrupt flag
-        PIR5bits.RXBnIF = 0;
-    }
-}
-
-/**
  * Checks for transmit buffer timeout.
  * 
  * @pre A TX buffer mapped to the Access Bank.
@@ -496,16 +412,16 @@ static void txCheckTimeoutIsr(uint16_t started) {
     // CAN ID bits) for some time, abort it, change to high priority, then
     // restart it.
     if ((ewin.SIDH & 0b11000000) && tSince >= CBUSCAN_TX_PRIORITY_HIKE_MILLIS) {
-        ewin.TXCONbits.TXREQ = 0;   // Abort
-        ewin.SIDH &= ~0b11000000;   // Set highest priority
-        ewin.TXCONbits.TXREQ = 1;   // Retry
+        ewin.TXCONbits.TXREQ = 0; // Abort
+        ewin.SIDH &= ~0b11000000; // Set highest priority
+        ewin.TXCONbits.TXREQ = 1; // Retry
 #ifdef INCLUDE_CBUS_CAN_STATS
         ++stats.txPrioHike;
 #endif
 
-    // If transmit has been running for too long, abort it.
+        // If transmit has been running for too long, abort it.
     } else if (tSince >= CBUSCAN_TX_TIMEOUT_MILLIS) {
-        ewin.TXCONbits.TXREQ = 0;   // Abort
+        ewin.TXCONbits.TXREQ = 0; // Abort
 #ifdef INCLUDE_CBUS_CAN_STATS
         ++stats.txTmoErr;
 #endif
@@ -529,9 +445,147 @@ void cbusCanTimerIsr() {
     }
 }
 
+/**
+ * Called on ECAN receive message interrupt.
+ */
+#if defined(CPU_FAMILY_PIC18_K80)
+void ECAN_RXBnI_ISR(void) {
+#endif
+#if defined(CPU_FAMILY_PIC18_K83)
+void __interrupt(irq(RXB1IF), base(IVT_BASE_ADDRESS), low_priority) ECAN_RXBnI_ISR(void) {
+#endif
+
+    // Loop for all used RX FIFO buffers, and room in the software FIFO
+    while (COMSTATbits.NOT_FIFOEMPTY && RX_FIFO_CUR_LENGTH < RX_FIFO_LENGTH) {
+        ECANCONbits.EWIN = ewinRxFifo | (CANCON & 0x07);
+
+        // Get the received data
+        rxNextIsr();
+#ifdef INCLUDE_CBUS_CAN_STATS
+        ++stats.rxMsgCount;
+#endif
+    }
+
+    // Clear interrupt flag
+    PIR5bits.RXBnIF = 0;    // The ECAN hardware overrides the setting of this bit (to '1') when any receive buffer is not empty.
+}
+
+/**
+ * Called on ECAN transmit message interrupt.
+ */
+#if defined(CPU_FAMILY_PIC18_K80)
+void ECAN_TXBnI_ISR(void) {
+#endif
+#if defined(CPU_FAMILY_PIC18_K83)
+void __interrupt(irq(TXB2IF), base(IVT_BASE_ADDRESS), low_priority) ECAN_TXBnI_ISR(void) {
+#endif
+
+    // Loop through TX buffers looking for the source of the interrupt
+    for (uint8_t i = 0; i < 3; ++i) {
+        ECANCONbits.EWIN = ewinTX + i;
+        if (ewin.TXCONbits.TXBIF) {
+
+            // Transmit finished
+#ifdef INCLUDE_CBUS_CAN_STATS
+            ++stats.txMsgCount;
+#endif
+            ewin.TXCONbits.TXBIF = 0;
+
+            // If TXB0, and FIFO not empty, start the next transmit
+            if (i == 0 && TX_FIFO_CUR_LENGTH > 0) txb0NextIsr();
+        }
+    }
+
+    // Clear interrupt flag
+    PIR5bits.TXBnIF = 0;
+}
+
+/**
+ * Called on ECAN FIFO high water interrupt.
+ */
+#if defined(CPU_FAMILY_PIC18_K80)
+void ECAN_FIFOWMI_ISR(void) {
+#endif
+#if defined(CPU_FAMILY_PIC18_K83)
+void __interrupt(irq(RXB0IF), base(IVT_BASE_ADDRESS), low_priority) ECAN_FIFOWMI_ISR(void) {
+#endif
+
+    // It was found that allowing the hardware FIFO to fill up, and not have
+    // any space in the software FIFO, the system would 'lock-up' until
+    // restarted.  Clearing a bit of space in the software FIFO stops this
+    // from happening; reducing the FIFO queue so that there are at least
+    // 3 free entries appears to work well.  Doing this by changing
+    // rxFifoNewest might appear illogical, but it retains the thread safe
+    // nature of the FIFO.
+    while (RX_FIFO_CUR_LENGTH > RX_FIFO_WM_TARGET_LENGTH) {
+        --rxFifoNewest;
+#ifdef INCLUDE_CBUS_CAN_STATS
+        --stats.rxFifoUsed;
+        --stats.rxMsgCount;
+        ++stats.rxMsgDiscarded;
+#endif
+    }
+
+    // Clear interrupt flag
+    PIR5bits.FIFOWMIF = 0;
+}
+
+/**
+ * Called on ECAN error interrupt.
+ */
+#if defined(CPU_FAMILY_PIC18_K80)
+void ECAN_ERRI_ISR(void) {
+#endif
+#if defined(CPU_FAMILY_PIC18_K83)
+void __interrupt(irq(ERRIF), base(IVT_BASE_ADDRESS), low_priority) ECAN_ERRI_ISR(void) {
+#endif
+
+    if (COMSTATbits.RXBNOVFL) {
+#ifdef INCLUDE_CBUS_CAN_STATS
+        ++stats.rxHwFifoFull;
+#endif
+        COMSTATbits.RXBNOVFL = 0;
+    }
+
+    // Clear interrupt flag
+    PIR5bits.ERRIF = 0;
+}
+
+/**
+ * Called on ECAN invalid message interrupt.
+ */
+#if defined(CPU_FAMILY_PIC18_K80)
+void ECAN_IRXI_ISR(void) {
+#endif
+#if defined(CPU_FAMILY_PIC18_K83)
+void __interrupt(irq(IRXIF), base(IVT_BASE_ADDRESS), low_priority) ECAN_IRXI_ISR(void) {
+#endif
+
+#ifdef INCLUDE_CBUS_CAN_STATS
+    ++stats.busInvMsg;
+#endif
+    txCheckErrorsIsr();
+
+    // Clear interrupt flag
+    PIR5bits.IRXIF = 0;
+}
+
+#if defined(CPU_FAMILY_PIC18_K80)
+/**
+ * Service routine for ECAN interrupts.
+ */
+void cbusCanIsr() {
+
+    if (PIR5bits.RXBnIF) ECAN_RXBnI_ISR();
+    if (PIR5bits.TXBnIF) ECAN_TXBnI_ISR();
+    if (PIR5bits.FIFOWMIF) ECAN_FIFOWMI_ISR();
+    if (PIR5bits.ERRIF) ECAN_ERRI_ISR();
+    if (PIR5bits.IRXIF) ECAN_IRXI_ISR();
+}
+#endif
+
 
 // </editor-fold>
-
 
 /**
  * Performs CAN ID self-enumeration.
@@ -546,7 +600,7 @@ static int8_t processEnumeration() {
 
     uint16_t t = getMillisShort();
     uint16_t tSince = t - selfEnumStartedMillis;
-    
+
     // If immediate start requested, or delayed start has waited long enough...
     if (selfEnumStatus == selfEnumIsRequested
             || (selfEnumStatus == selfEnumIsPending && tSince >= CBUSCAN_ENUM_HOLD_OFF_MILLIS)) {
@@ -572,7 +626,7 @@ static int8_t processEnumeration() {
         txb1StartedMillis = t;
         selfEnumStartedMillis = t;
 
-    // If the wait for response period has expired...
+        // If the wait for response period has expired...
     } else if (selfEnumStatus == selfEnumIsInProgress && tSince >= CBUSCAN_ENUM_PERIOD_MILLIS) {
 
         // Self-enumeration complete
@@ -582,7 +636,7 @@ static int8_t processEnumeration() {
         bool ok = false;
         for (uint8_t i = 0; i < CBUSCAN_ENUM_BITMAP_SIZE; ++i) {
             if (selfEnumBitmap[i] != 0b11111111) {
-                uint8_t newCanID = (uint8_t)(i << 3);
+                uint8_t newCanID = (uint8_t) (i << 3);
                 for (uint8_t x = selfEnumBitmap[i]; (x & 0b00000001); x >>= 1) ++newCanID;
                 ok = setCbusCanID(newCanID, true);
                 break;
@@ -598,9 +652,9 @@ static int8_t processEnumeration() {
                 cbusMsg[0] = OPC_NNACK;
                 return 1;
 
-            // Otherwise no free CAN ID found
-            // Presumably this node, and any other node with the same address,
-            // will self-enumerate ad-nauseum?
+                // Otherwise no free CAN ID found
+                // Presumably this node, and any other node with the same address,
+                // will self-enumerate ad-nauseum?
             } else {
                 return -CMDERR_INVALID_EVENT;
             }
@@ -616,11 +670,11 @@ static int8_t processEnumeration() {
  * @param tx 1: send response; <0 send error response.
  */
 static void queueTransmit(int8_t tx) {
-    
+
     // Change error code into a proper message
     if (tx < 0) {
         cbusMsg[0] = OPC_CMDERR;
-        cbusMsg[3] = (uint8_t) -tx;
+        cbusMsg[3] = (uint8_t) - tx;
     }
 
     // Add our node number if required by the opcode
@@ -644,7 +698,7 @@ static void queueTransmit(int8_t tx) {
         if (stats.txFifoUsed > stats.txFifoMaxUsed) stats.txFifoMaxUsed = stats.txFifoUsed;
 #endif
 
-    // FIFO full
+        // FIFO full
 #ifdef INCLUDE_CBUS_CAN_STATS
     } else {
         ++stats.txSwFifoFull;
@@ -671,7 +725,7 @@ bool receiveCbusCan() {
     // Get sending node's CAN ID and the data length from the FIFO
     uint8_t id = rxFifo[idx].id;
     uint8_t dlc = rxFifo[idx].dlc;
-    
+
     // If RTR flag is set, and zero data specified...
     if (dlc & 0b01000000) {
 
@@ -690,21 +744,21 @@ bool receiveCbusCan() {
         // If we have self-enumeration pending, extend the wait to allow other
         // process to finish
         if (selfEnumStatus == selfEnumIsPending) selfEnumStartedMillis = txb2StartedMillis;
-        
-    // If zero data, must be response to our RTR...
+
+        // If zero data, must be response to our RTR...
     } else if (dlc == 0) {
 
         // Set bitmap bit corresponding to received CAN ID
         selfEnumBitmap[id >> 3] |= 1 << (id & 0b00000111);
 
-    // If received CAN ID is the same as ours...
+        // If received CAN ID is the same as ours...
     } else if (id == canBusID && selfEnumStatus == selfEnumIsInactive) {
 
         // Start self-enumeration after a delay
         selfEnumStatus = selfEnumIsPending;
         selfEnumStartedMillis = getMillisShort();
 
-    // Nothing to do with self-enumeration - must be a real message
+        // Nothing to do with self-enumeration - must be a real message
     } else {
 
         // Put data in cbusMsg and flag for processing
@@ -715,7 +769,7 @@ bool receiveCbusCan() {
     // Update FIFO
     ++rxFifoOldest;
 #ifdef INCLUDE_CBUS_CAN_STATS
-    -- stats.rxFifoUsed;
+    --stats.rxFifoUsed;
 #endif
 
     if (doProcess) {
@@ -792,7 +846,6 @@ bool setCbusCanID(uint8_t newCanID, bool check) {
 
 
 // <editor-fold defaultstate="expanded" desc="OpCode handling routines">
-
 
 /**
  * Processes opcode 0x75 "Set a CAN_ID in existing FLiM node".

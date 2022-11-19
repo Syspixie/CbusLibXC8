@@ -89,13 +89,15 @@ extern "C" {
     } canFrame_t;
 
 
-    void cbusCanIsr(void);
-    void cbusCanTimerIsr(void);
     void initCbusCan(void);
     bool receiveCbusCan(void);
     void transmitCbusCan(void);
     void enumerateCbusCanID(bool sendResult);
     bool setCbusCanID(uint8_t newCanID, bool check);
+#if defined(CPU_FAMILY_PIC18_K80)
+    void cbusCanIsr(void);
+#endif
+    void cbusCanTimerIsr(void);
 
 
 #ifdef	__cplusplus

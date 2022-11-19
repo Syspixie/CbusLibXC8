@@ -84,6 +84,7 @@
 
 #include "millis.h"
 #include "hardware.h"
+#include "module.h"
 
 
 // extern
@@ -184,38 +185,39 @@ void delayMillisShort(uint16_t ms) {
 // <editor-fold defaultstate="expanded" desc="Interrupt service routines">
 
 
+#if defined(CPU_FAMILY_PIC18_K83)
 /**
- * Service routine for TIMER0 interrupts.
- * 
- * @return true if timer has 'ticked'.
+ * Called on TMR0 interrupt.
  */
-bool millisIsr() {
-    
-    bool ticked = false;
+void __interrupt(irq(TMR0), base(IVT_BASE_ADDRESS), low_priority) TMR0_ISR() {
 
-    // If TIMER0 has 'ticked' (once every millisecond)...
+    // Increment timer/counter value
+    ++millisTicks.value;
+
+    // Clear interrupt flag
+    PIR3bits.TMR0IF = 0;
+
+    // Call application 'tick' ISRs.
+    moduleTimerIsr();
+}
+#endif
+
 #if defined(CPU_FAMILY_PIC18_K80)
-    if (INTCONbits.TMR0IF == 1) {
+/**
+ * Service routine for TMR0 interrupts.
+ */
+void millisIsr() {
 
-        // reload TMR0
+    if (INTCONbits.TMR0IF) {
+
+        // Reload TMR0
         TMR0L = 0x06;
         TMR0H = 0x00;
 
-        INTCONbits.TMR0IF = 0;
-#endif
-#if defined(CPU_FAMILY_PIC18_K83)
-    if (PIR3bits.TMR0IF == 1) {
-
-        PIR3bits.TMR0IF = 0;
-#endif
-
-        // Increment timer/counter value
-        ++millisTicks.value;
-        ticked = true;
+        TMR0_ISR();
     }
-
-    return ticked;
 }
+#endif
 
 
 // </editor-fold>

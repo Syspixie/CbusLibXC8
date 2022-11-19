@@ -98,6 +98,7 @@ extern "C" {
 
     void moduleHighPriorityIsr(void);
     void moduleLowPriorityIsr(void);
+    void moduleTimerIsr(void);
     void processModule(void);
     int8_t processCbusMessage(void);
     int8_t generateCbusMessage(void);
