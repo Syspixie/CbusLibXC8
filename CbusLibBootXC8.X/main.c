@@ -390,6 +390,9 @@ void main() __at(0x0020) {
     RB2PPS = 0x33;      //RB2->ECAN:CANTX0;    
     CANRXPPS = 0x0B;    //RB3->ECAN:CANRX;    
 #endif
+#if defined(CPU_FAMILY_PIC18_Q83)
+    // ToDo
+#endif
 
     LATA = 0x00;
     LATB = 0x00;
@@ -420,6 +423,9 @@ void main() __at(0x0020) {
     WPUC = 0b11111111;
     WPUE = 0b00000000;
 #endif
+#if defined(CPU_FAMILY_PIC18_Q83)
+    // ToDo
+#endif
 
     LATB = 0b11000000;      // RB7 & RB6 set high (LEDs on)
 
@@ -433,6 +439,9 @@ void main() __at(0x0020) {
 #endif
 #if defined(CPU_FAMILY_PIC18_K83)
     CIOCON = 0b00000000;
+#endif
+#if defined(CPU_FAMILY_PIC18_Q83)
+    // ToDo
 #endif
 
     // Receive masks

@@ -85,6 +85,9 @@ void __section("mainSec") main() {
 #if defined(CPU_FAMILY_PIC18_K83)
     INTCON0bits.IPEN = 1;           // Enable high/low interrupt priorities
 #endif
+#if defined(CPU_FAMILY_PIC18_Q83)
+    // ToDo
+#endif
 
 #if defined(IVT_BASE_ADDRESS)
     IVTLOCK = 0x55;
@@ -127,6 +130,9 @@ void __interrupt(low_priority) __section("mainSec") isrLow() {
 #endif
 #if defined(CPU_FAMILY_PIC18_K83)
 void __interrupt(irq(default), base(IVT_BASE_ADDRESS)) Default_ISR() {}
+#endif
+#if defined(CPU_FAMILY_PIC18_Q83)
+    // ToDo
 #endif
 
 

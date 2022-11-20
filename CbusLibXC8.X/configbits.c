@@ -129,8 +129,9 @@
 // CONFIG7H
 #pragma config EBTRB = OFF      // Table Read Protect Boot (Disabled)
 
+#endif
 // *****************************************************************************
-#elif defined(CPU_FAMILY_PIC18_K83)
+#if defined(CPU_FAMILY_PIC18_K83)
 
 // CONFIG1L
 #pragma config FEXTOSC = HS     // External Oscillator Selection->HS (crystal oscillator) above 8 MHz; PFM set to high power
@@ -182,4 +183,8 @@
 // CONFIG5L
 #pragma config CP = OFF         // PFM and Data EEPROM Code Protection bit->PFM and Data EEPROM code protection disabled
 
+#endif
+// *****************************************************************************
+#if defined(CPU_FAMILY_PIC18_Q83)
+// ToDo
 #endif

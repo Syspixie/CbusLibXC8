@@ -119,6 +119,9 @@ void initMillis() {
     TMR0L = 0x00;
     TMR0H = 0xF9;
 #endif
+#if defined(CPU_FAMILY_PIC18_Q83)
+    // ToDo
+#endif
 }
 
 /**
@@ -203,6 +206,9 @@ void TMR0_ISR() {
 #endif
 #if defined(CPU_FAMILY_PIC18_K83)
     PIR3bits.TMR0IF = 0;
+#endif
+#if defined(CPU_FAMILY_PIC18_Q83)
+    // ToDo
 #endif
 
     // Call application 'tick' ISRs.

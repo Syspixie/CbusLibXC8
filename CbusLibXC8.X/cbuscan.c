@@ -208,6 +208,9 @@ void initCbusCan() {
 #if defined(CPU_FAMILY_PIC18_K83)
     CIOCON = 0b00000000;
 #endif
+#if defined(CPU_FAMILY_PIC18_Q83)
+    // ToDo
+#endif
 
     // Receive masks
     RXM0EIDH = 0;
