@@ -188,11 +188,10 @@ void delayMillisShort(uint16_t ms) {
 /**
  * Called on TMR0 interrupt.
  */
-#if defined(CPU_FAMILY_PIC18_K80)
-void TMR0_ISR() {
-#endif
-#if defined(CPU_FAMILY_PIC18_K83)
+#if defined(IVT_BASE_ADDRESS)
 void __interrupt(irq(TMR0), base(IVT_BASE_ADDRESS), low_priority) TMR0_ISR() {
+#else
+void TMR0_ISR() {
 #endif
 
     // Increment timer/counter value

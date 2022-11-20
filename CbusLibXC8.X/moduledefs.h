@@ -124,9 +124,6 @@ extern "C" {
 #define EVENT_SIZE (6 + EVENT_NUM_VARS)
 
 // Bottom up...
-#if defined(CPU_FAMILY_PIC18_K83)
-#define IVT_BASE_ADDRESS 0x0600
-#endif
 #define APPLICATION_BASE_ADDRESS 0x000800
 #define PARAMETER_BLOCK_ADDRESS (APPLICATION_BASE_ADDRESS + 0x20)
 #define MODULE_TYPE_NAME_ADDRESS (PARAMETER_BLOCK_ADDRESS + sizeof(parameterBlock_t))
@@ -138,6 +135,12 @@ extern "C" {
 #define NODE_VAR_ADDRESS ((FLASH_VERSION_ADDRESS - NUM_NODE_VARS) & ~1)
 // Finally eventTable, on a block boundary
 #define EVENTS_FLASH_ADDRESS ((NODE_VAR_ADDRESS - (MAX_NUM_EVENTS * EVENT_SIZE)) & ~(FLASH_BLOCK_SIZE - 1))
+
+// Interrupt vector table, at the top of bootloader region
+// Note: can't use calculation to derive address: __interrupt can't handle it!
+#if defined(CPU_FAMILY_PIC18_K83)
+#define IVT_BASE_ADDRESS 0x000760   // 80 vectors; 0x000800 - (2 * 80)
+#endif
 
 
 #ifdef	__cplusplus

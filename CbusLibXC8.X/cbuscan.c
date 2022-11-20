@@ -448,11 +448,10 @@ void cbusCanTimerIsr() {
 /**
  * Called on ECAN receive message interrupt.
  */
-#if defined(CPU_FAMILY_PIC18_K80)
-void ECAN_RXBnI_ISR(void) {
-#endif
-#if defined(CPU_FAMILY_PIC18_K83)
+#if defined(IVT_BASE_ADDRESS)
 void __interrupt(irq(RXB1IF), base(IVT_BASE_ADDRESS), low_priority) ECAN_RXBnI_ISR(void) {
+#else
+void ECAN_RXBnI_ISR(void) {
 #endif
 
     // Loop for all used RX FIFO buffers, and room in the software FIFO
@@ -473,11 +472,10 @@ void __interrupt(irq(RXB1IF), base(IVT_BASE_ADDRESS), low_priority) ECAN_RXBnI_I
 /**
  * Called on ECAN transmit message interrupt.
  */
-#if defined(CPU_FAMILY_PIC18_K80)
-void ECAN_TXBnI_ISR(void) {
-#endif
-#if defined(CPU_FAMILY_PIC18_K83)
+#if defined(IVT_BASE_ADDRESS)
 void __interrupt(irq(TXB2IF), base(IVT_BASE_ADDRESS), low_priority) ECAN_TXBnI_ISR(void) {
+#else
+void ECAN_TXBnI_ISR(void) {
 #endif
 
     // Loop through TX buffers looking for the source of the interrupt
@@ -503,11 +501,10 @@ void __interrupt(irq(TXB2IF), base(IVT_BASE_ADDRESS), low_priority) ECAN_TXBnI_I
 /**
  * Called on ECAN FIFO high water interrupt.
  */
-#if defined(CPU_FAMILY_PIC18_K80)
-void ECAN_FIFOWMI_ISR(void) {
-#endif
-#if defined(CPU_FAMILY_PIC18_K83)
+#if defined(IVT_BASE_ADDRESS)
 void __interrupt(irq(RXB0IF), base(IVT_BASE_ADDRESS), low_priority) ECAN_FIFOWMI_ISR(void) {
+#else
+void ECAN_FIFOWMI_ISR(void) {
 #endif
 
     // It was found that allowing the hardware FIFO to fill up, and not have
@@ -533,11 +530,10 @@ void __interrupt(irq(RXB0IF), base(IVT_BASE_ADDRESS), low_priority) ECAN_FIFOWMI
 /**
  * Called on ECAN error interrupt.
  */
-#if defined(CPU_FAMILY_PIC18_K80)
-void ECAN_ERRI_ISR(void) {
-#endif
-#if defined(CPU_FAMILY_PIC18_K83)
+#if defined(IVT_BASE_ADDRESS)
 void __interrupt(irq(ERRIF), base(IVT_BASE_ADDRESS), low_priority) ECAN_ERRI_ISR(void) {
+#else
+void ECAN_ERRI_ISR(void) {
 #endif
 
     if (COMSTATbits.RXBNOVFL) {
@@ -554,11 +550,10 @@ void __interrupt(irq(ERRIF), base(IVT_BASE_ADDRESS), low_priority) ECAN_ERRI_ISR
 /**
  * Called on ECAN invalid message interrupt.
  */
-#if defined(CPU_FAMILY_PIC18_K80)
-void ECAN_IRXI_ISR(void) {
-#endif
-#if defined(CPU_FAMILY_PIC18_K83)
+#if defined(IVT_BASE_ADDRESS)
 void __interrupt(irq(IRXIF), base(IVT_BASE_ADDRESS), low_priority) ECAN_IRXI_ISR(void) {
+#else
+void ECAN_IRXI_ISR(void) {
 #endif
 
 #ifdef INCLUDE_CBUS_CAN_STATS

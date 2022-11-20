@@ -84,7 +84,9 @@ void __section("mainSec") main() {
 #endif
 #if defined(CPU_FAMILY_PIC18_K83)
     INTCON0bits.IPEN = 1;           // Enable high/low interrupt priorities
+#endif
 
+#if defined(IVT_BASE_ADDRESS)
     IVTLOCK = 0x55;
     IVTLOCK = 0xAA;
     IVTLOCKbits.IVTLOCKED = 0x00;   // unlock IVT
