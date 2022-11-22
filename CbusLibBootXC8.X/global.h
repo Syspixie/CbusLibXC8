@@ -109,6 +109,12 @@ extern "C" {
 
     typedef union {
         uint32_t value;
+        struct {
+            uint8_t valueL;
+            uint8_t valueH;
+            uint8_t valueU;
+            uint8_t valueT;
+        };
         uint8_t bytes[4];
         uint16_t words[2];
     } bytes32_t;

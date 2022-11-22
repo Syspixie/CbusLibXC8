@@ -1,5 +1,5 @@
 /**
- * @file CbusLibXC8 global.h
+ * @file CbusLibXC8 cancommon.h
  * @copyright (C) 2022 Konrad Orlowski     <syspixie@gmail.com>
  * 
  *  CbusLibXC8 is licensed under the:
@@ -58,85 +58,112 @@
 
 /**
  * @author Konrad Orlowski
- * @date August 2022
+ * @date November 2022
  */
 
-#ifndef GLOBAL_H
-#define	GLOBAL_H
+#ifndef CANCOMMON_H
+#define	CANCOMMON_H
 
 #ifdef	__cplusplus
 extern "C" {
 #endif
 
 
-#include <xc.h>
-#include <stdint.h>
-#include <stdbool.h>
+#include "global.h"
 
 
-    typedef union {
-        uint8_t value;
-        struct {
-            unsigned bit0 : 1;
-            unsigned bit1 : 1;
-            unsigned bit2 : 1;
-            unsigned bit3 : 1;
-            unsigned bit4 : 1;
-            unsigned bit5 : 1;
-            unsigned bit6 : 1;
-            unsigned bit7 : 1;
-        };
-    } bits8_t;
+/**
+  CAN Message Object data structure
 
-    typedef union {
-        uint16_t value;
-        struct {
-            uint8_t valueL;
-            uint8_t valueH;
-        };
-        uint8_t bytes[2];
-    } bytes16_t;
+  @Summary
+    Defines the CAN Message Object data structure.
 
-    typedef union {
-        uint24_t value;
-        struct {
-            uint8_t valueL;
-            uint8_t valueH;
-            uint8_t valueU;
-        };
-        uint8_t bytes[3];
-    } bytes24_t;
+  @Description
+    This Data structure is to implement a CAN FIFO message object.
+*/
+typedef union 
+{
+    uint8_t msgfields;
+    struct
+    {
+        uint8_t idType:1;       // 1 bit (Standard Frame or Extended Frame)
+        uint8_t frameType:1;    // 1 bit (Data Frame or RTR Frame)
+        uint8_t dlc:4;          // 4 bit (No of data bytes a message frame contains)
+        uint8_t formatType:1;   // 1 bit (CAN 2.0 Format or CAN_FD Format)
+        uint8_t brs:1;          // 1 bit (Bit Rate Switch)
+    };
+} CAN_MSG_FIELD;
 
-    typedef union {
-        uint32_t value;
-        struct {
-            uint8_t valueL;
-            uint8_t valueH;
-            uint8_t valueU;
-            uint8_t valueT;
-        };
-        uint8_t bytes[4];
-        uint16_t words[2];
-    } bytes32_t;
+typedef struct 
+{
+    uint32_t msgId;          // 29 bit (SID: 11bit, EID:18bit)
+    CAN_MSG_FIELD field;     // CAN TX/RX Message Object Control
+    uint8_t *data;           // Pointer to message data
+} CAN_MSG_OBJ;   
 
-    typedef union {
-        struct {
-            uint8_t d0;
-            uint8_t d1;
-            uint8_t d2;
-            uint8_t d3;
-            uint8_t d4;
-            uint8_t d5;
-            uint8_t d6;
-            uint8_t d7;
-        };
-        uint8_t bytes[8];
-        uint16_t words[4];
-    } bytes64_t;
+/**
+  CAN Message Object Bit Rate Switch Selection Enumeration
+
+  @Summary
+    Defines the CAN message object bit rate switch selection enumeration.
+
+  @Description
+    This enumeration defines the CAN message object bit rate switch selection option.
+*/
+typedef enum 
+{   
+    CAN_NON_BRS_MODE    = 0,
+    CAN_BRS_MODE        = 1     //Supported only in CAN FD mode
+} CAN_MSG_OBJ_BRS_MODE;
+
+/**
+  CAN Message Object Identifier Selection Enumeration
+
+  @Summary
+    Defines the CAN message object identifier selection enumeration.
+
+  @Description
+    This enumeration defines the CAN message object identifier selection option.
+*/
+typedef enum 
+{   
+    CAN_FRAME_STD       = 0,
+    CAN_FRAME_EXT       = 1,
+} CAN_MSG_OBJ_ID_TYPE;
+
+/**
+  CAN Message Object Frame Type Selection Enumeration
+
+  @Summary
+    Defines the CAN message object frame type selection enumeration.
+
+  @Description
+    This enumeration defines the CAN message object frame type selection option.
+*/
+typedef enum 
+{   
+    CAN_FRAME_DATA      = 0,
+    CAN_FRAME_RTR       = 1,
+} CAN_MSG_OBJ_FRAME_TYPE;
+
+/**
+  CAN Message Object Format Type Selection Enumeration
+
+  @Summary
+    Defines the CAN message object format type selection enumeration.
+
+  @Description
+    This enumeration defines the CAN message object format type selection option.
+*/
+typedef enum 
+{   
+    CAN_2_0_FORMAT      = 0,
+    CAN_FD_FORMAT       = 1     //Supported only in CAN FD mode
+} CAN_MSG_OBJ_TYPE;
 
 
 #ifdef	__cplusplus
 }
 #endif
 
-#endif	/* GLOBAL_H */
+#endif	/* CANCOMMON_H */

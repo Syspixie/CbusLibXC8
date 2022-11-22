@@ -72,8 +72,6 @@ extern "C" {
 #include "global.h"
 
 
-#define CBUSCAN_TX_PRIORITY_HIKE_MILLIS 750     // 0.75 seconds
-#define CBUSCAN_TX_TIMEOUT_MILLIS 1000          // 1 second
 #define CBUSCAN_MIN_DYNAMIC_CANID 1
 #define CBUSCAN_MAX_DYNAMIC_CANID 99
 #define CBUSCAN_MAX_CANID 127
@@ -81,12 +79,6 @@ extern "C" {
 #define CBUSCAN_ENUM_HOLD_OFF_MILLIS 200        // Wait 200ms before starting
 #define CBUSCAN_ENUM_PERIOD_MILLIS 100          // Enumerate for 100ms
 
-
-    typedef struct {        
-        uint8_t id;     // Used for receive only
-        uint8_t dlc;
-        uint8_t data[8];
-    } canFrame_t;
 
 
     void initCbusCan(void);

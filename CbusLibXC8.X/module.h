@@ -93,6 +93,7 @@ extern "C" {
     extern interactState_t interactState;
     extern bytes16_t cbusNodeNumber;
     extern uint8_t canBusID;
+    extern bytes16_t encodedCanBusID;
     extern uint8_t cbusMsg[8];
 
 

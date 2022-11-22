@@ -110,51 +110,6 @@ flickerState_t flickerState;
 uint16_t flickerMillis;
 
 
-// <editor-fold defaultstate="expanded" desc="Interrupt service routines">
-
-
-/**
- * Checks the state of the program button to detect press and release.
- * 
- * Called at 2ms intervals.  Press defined as 'off' followed by 15 'on's;
- * release defined as 'on' followed by 15 'off's.  So state must have changed,
- * and the new state have been stable for 30ms.
- * 
- * @post btnProgIsPressed updated.
- */
-static void btnProgDebounceIsr() {
-
-    // Static variable for button state shift register.
-    static bytes16_t shift = {.value = (uint16_t) ~0};
-
-    // Shift old states and append current state
-    shift.value <<= 1;
-    shift.bytes[0] |= BtnProg_GetValue();    // pressed = 0
-
-    // Look for state change followed by stable period
-    if (shift.value == 0x8000) {
-        btnProgIsPressed = true;
-    } else if (shift.value == 0x7FFF) {
-        btnProgIsPressed = false;
-    }
-}
-
-/**
- * Performs regular interaction operations (called every millisecond).
- */
-void interactTimerIsr(void) {
-
-    static uint8_t toggle = 0;
-
-    // Simple divide by 2 to give reasonable button state table time
-    toggle ^= 1;
-    if (toggle == 0) btnProgDebounceIsr();      // Called every 2ms
-}
-
-
-// </editor-fold>
-
-
 /**
  * Toggles the FLiM LED.
  * 
@@ -401,6 +356,51 @@ void longFlicker() {
     flickerMillis = getMillisShort();
     flickerLedOn();
 }
+
+
+// <editor-fold defaultstate="expanded" desc="Interrupt service routines">
+
+
+/**
+ * Checks the state of the program button to detect press and release.
+ * 
+ * Called at 2ms intervals.  Press defined as 'off' followed by 15 'on's;
+ * release defined as 'on' followed by 15 'off's.  So state must have changed,
+ * and the new state have been stable for 30ms.
+ * 
+ * @post btnProgIsPressed updated.
+ */
+static void btnProgDebounceIsr() {
+
+    // Static variable for button state shift register.
+    static bytes16_t shift = {.value = (uint16_t) ~0};
+
+    // Shift old states and append current state
+    shift.value <<= 1;
+    shift.bytes[0] |= BtnProg_GetValue();    // pressed = 0
+
+    // Look for state change followed by stable period
+    if (shift.value == 0x8000) {
+        btnProgIsPressed = true;
+    } else if (shift.value == 0x7FFF) {
+        btnProgIsPressed = false;
+    }
+}
+
+/**
+ * Performs regular interaction operations (called every millisecond).
+ */
+void interactTimerIsr(void) {
+
+    static uint8_t toggle = 0;
+
+    // Simple divide by 2 to give reasonable button state table time
+    toggle ^= 1;
+    if (toggle == 0) btnProgDebounceIsr();      // Called every 2ms
+}
+
+
+// </editor-fold>
 
 
 // <editor-fold defaultstate="expanded" desc="OpCode handling routines">

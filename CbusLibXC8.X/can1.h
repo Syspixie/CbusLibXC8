@@ -1,5 +1,5 @@
 /**
- * @file CbusLibXC8 global.h
+ * @file CbusLibXC8 can1.h
  * @copyright (C) 2022 Konrad Orlowski     <syspixie@gmail.com>
  * 
  *  CbusLibXC8 is licensed under the:
@@ -58,85 +58,31 @@
 
 /**
  * @author Konrad Orlowski
- * @date August 2022
+ * @date November 2022
  */
 
-#ifndef GLOBAL_H
-#define	GLOBAL_H
+#ifndef CAN1_H
+#define	CAN1_H
 
 #ifdef	__cplusplus
 extern "C" {
 #endif
 
 
-#include <xc.h>
-#include <stdint.h>
-#include <stdbool.h>
+#include "global.h"
+#include "cancommon.h"
 
 
-    typedef union {
-        uint8_t value;
-        struct {
-            unsigned bit0 : 1;
-            unsigned bit1 : 1;
-            unsigned bit2 : 1;
-            unsigned bit3 : 1;
-            unsigned bit4 : 1;
-            unsigned bit5 : 1;
-            unsigned bit6 : 1;
-            unsigned bit7 : 1;
-        };
-    } bits8_t;
-
-    typedef union {
-        uint16_t value;
-        struct {
-            uint8_t valueL;
-            uint8_t valueH;
-        };
-        uint8_t bytes[2];
-    } bytes16_t;
-
-    typedef union {
-        uint24_t value;
-        struct {
-            uint8_t valueL;
-            uint8_t valueH;
-            uint8_t valueU;
-        };
-        uint8_t bytes[3];
-    } bytes24_t;
-
-    typedef union {
-        uint32_t value;
-        struct {
-            uint8_t valueL;
-            uint8_t valueH;
-            uint8_t valueU;
-            uint8_t valueT;
-        };
-        uint8_t bytes[4];
-        uint16_t words[2];
-    } bytes32_t;
-
-    typedef union {
-        struct {
-            uint8_t d0;
-            uint8_t d1;
-            uint8_t d2;
-            uint8_t d3;
-            uint8_t d4;
-            uint8_t d5;
-            uint8_t d6;
-            uint8_t d7;
-        };
-        uint8_t bytes[8];
-        uint16_t words[4];
-    } bytes64_t;
+    void initCan1(void);
+    void can1SendRtrRequest(void);
+    void can1SendRtrResponse(void);
+    void can1Transmit(void);
+    int8_t can1Receive(bool (* msgCheckFunc)(uint8_t id, uint8_t dlc, volatile uint8_t* data));
+    void can1TimerIsr(void);
 
 
 #ifdef	__cplusplus
 }
 #endif
 
-#endif	/* GLOBAL_H */
+#endif	/* CAN1_H */

@@ -24,6 +24,9 @@
       <itemPath>util.h</itemPath>
       <itemPath>hardware.h</itemPath>
       <itemPath>ports.h</itemPath>
+      <itemPath>cancommon.h</itemPath>
+      <itemPath>ecan.h</itemPath>
+      <itemPath>can1.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -46,6 +49,8 @@
       <itemPath>util.c</itemPath>
       <itemPath>ports.c</itemPath>
       <itemPath>configbits.c</itemPath>
+      <itemPath>ecan.c</itemPath>
+      <itemPath>can1.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"

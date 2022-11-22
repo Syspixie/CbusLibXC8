@@ -1,5 +1,5 @@
 /**
- * @file CbusLibXC8 global.h
+ * @file CbusLibXC8 can1.c
  * @copyright (C) 2022 Konrad Orlowski     <syspixie@gmail.com>
  * 
  *  CbusLibXC8 is licensed under the:
@@ -57,86 +57,73 @@
  */
 
 /**
+ * Code to pass CBUS messages over CAN bus.
+ * 
  * @author Konrad Orlowski
- * @date August 2022
+ * @date November 2022
+ * 
+ * @note Uses hardware CAN1 module.
+ *
+ * The CAN1 peripheral is configured with 10 TXQ FIFOs and 12 RX FIFOs.  Only
+ * standard ID messages are received and transmitted; extended ID messages are
+ * filtered out in hardware.  Bus speed is set at 125kbps.
  */
 
-#ifndef GLOBAL_H
-#define	GLOBAL_H
 
-#ifdef	__cplusplus
-extern "C" {
+#include "can1.h"
+#include "hardware.h"
+#include "util.h"
+#include "millis.h"
+#include "stats.h"
+#include "module.h"
+
+
+#define CBUSCAN_TX_PRIORITY_HIKE_MILLIS 750     // 0.75 seconds
+#define CBUSCAN_TX_TIMEOUT_MILLIS 1000          // 1 second
+
+// extern
+#ifdef INCLUDE_CBUS_CAN_STATS
+volatile stats_t stats = {.bytes =
+    {[0 ... sizeof (stats.bytes) - 1] = 0}};
 #endif
 
-
-#include <xc.h>
-#include <stdint.h>
-#include <stdbool.h>
-
-
-    typedef union {
-        uint8_t value;
-        struct {
-            unsigned bit0 : 1;
-            unsigned bit1 : 1;
-            unsigned bit2 : 1;
-            unsigned bit3 : 1;
-            unsigned bit4 : 1;
-            unsigned bit5 : 1;
-            unsigned bit6 : 1;
-            unsigned bit7 : 1;
-        };
-    } bits8_t;
-
-    typedef union {
-        uint16_t value;
-        struct {
-            uint8_t valueL;
-            uint8_t valueH;
-        };
-        uint8_t bytes[2];
-    } bytes16_t;
-
-    typedef union {
-        uint24_t value;
-        struct {
-            uint8_t valueL;
-            uint8_t valueH;
-            uint8_t valueU;
-        };
-        uint8_t bytes[3];
-    } bytes24_t;
-
-    typedef union {
-        uint32_t value;
-        struct {
-            uint8_t valueL;
-            uint8_t valueH;
-            uint8_t valueU;
-            uint8_t valueT;
-        };
-        uint8_t bytes[4];
-        uint16_t words[2];
-    } bytes32_t;
-
-    typedef union {
-        struct {
-            uint8_t d0;
-            uint8_t d1;
-            uint8_t d2;
-            uint8_t d3;
-            uint8_t d4;
-            uint8_t d5;
-            uint8_t d6;
-            uint8_t d7;
-        };
-        uint8_t bytes[8];
-        uint16_t words[4];
-    } bytes64_t;
+// Transmit buffer start times for determining timeout
+uint16_t txb0StartedMillis;
+uint16_t txb1StartedMillis;
+uint16_t txb2StartedMillis;
 
 
-#ifdef	__cplusplus
+void initCan1() {
 }
-#endif
 
-#endif	/* GLOBAL_H */
+void can1SendRtrRequest() {
+
+    txb1StartedMillis = getMillisShort();
+}
+
+void can1SendRtrResponse() {
+
+    txb2StartedMillis = getMillisShort();
+}
+
+void can1Transmit() {
+}
+
+int8_t can1Receive(bool (* msgCheckFunc)(uint8_t id, uint8_t dlc, volatile uint8_t* data)) {
+
+    return 0;
+}
+
+
+// <editor-fold defaultstate="expanded" desc="Interrupt service routines">
+
+
+/**
+ * Performs regular CAN bus operations (called every millisecond).
+ */
+void can1TimerIsr() {
+
+}
+
+
+// </editor-fold>
