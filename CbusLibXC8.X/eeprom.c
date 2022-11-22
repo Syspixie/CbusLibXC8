@@ -68,6 +68,12 @@
 #include "module.h"
 
 
+#if defined(CPU_FAMILY_PIC18_K80)
+#define NVMADRL EEADR
+#define NVMADRH EEADRH
+#endif
+
+
 /**
  * Reads from the current EEPROM location.
  * 
@@ -75,20 +81,39 @@
  * @return Byte read.
  */
 static uint8_t readEE() {
-    
-    // Set up read
-    NVMCON1 = NVM_READ_EEPROM;
-
-    // Initiate read
-    NVMCON1bits.RD = 1;
 
 #if defined(CPU_FAMILY_PIC18_K80)
+    // Set up read
+    EECON1 = 0b00000000;
+
+    // Initiate read
+    EECON1bits.RD = 1;
+
     // Wait for read to complete
     NOP();
     NOP();
+    
+    return EEDATA;
 #endif
+#if defined(CPU_FAMILY_PIC18_K83)
+    // Set up read
+    NVMCON1 = 0b00000000;
+
+    // Initiate read
+    NVMCON1bits.RD = 1;
     
     return NVMDAT;
+#endif
+#if defined(CPU_FAMILY_PIC18_Q83)
+    // Set up read
+    NVMADRU = 0x38;
+    NVMCON1bits.NVMCMD = 0b000;
+
+    // Initiate read
+    NVMCON0bits.GO = 1;
+    
+    return NVMDATL;
+#endif
 }
 
 /**
@@ -104,10 +129,30 @@ static void writeEE(uint8_t data) {
 
     while (stallMemoryWrite());
 
+#if defined(CPU_FAMILY_PIC18_K80)
+    EEDATA = data;
+
+    // Set up write
+    EECON1 = 0b00000100;
+
+    // Initiate write with all interrupts temporarily disabled
+    INTERRUPTbits_GIEH = 0;
+    EECON2 = 0x55;
+    EECON2 = 0xAA;
+    EECON1bits.WR = 1;
+    INTERRUPTbits_GIEH = 1;
+
+    // Wait for write to complete
+    while (EECON1bits.WR);      // Blocking loop
+
+    // Avoid accidental writes
+    EECON1 = 0b00000000;
+#endif
+#if defined(CPU_FAMILY_PIC18_K83)
     NVMDAT = data;
 
     // Set up write
-    NVMCON1 = NVM_WRITE_EEPROM;
+    NVMCON1 = 0b00000100;
 
     // Initiate write with all interrupts temporarily disabled
     INTERRUPTbits_GIEH = 0;
@@ -117,7 +162,31 @@ static void writeEE(uint8_t data) {
     INTERRUPTbits_GIEH = 1;
 
     // Wait for write to complete
-    while (NVMCON1bits.WR);      // Blocking loop
+    while (NVMCON1bits.WR);     // Blocking loop
+
+    // Avoid accidental writes
+    NVMCON1 = 0b00000000;
+#endif
+#if defined(CPU_FAMILY_PIC18_Q83)
+    NVMDATL = data;
+
+    // Set up write
+    NVMADRU = 0x38;
+    NVMCON1bits.NVMCMD = 0b011;
+
+    // Initiate write with all interrupts temporarily disabled
+    INTERRUPTbits_GIEH = 0;
+    NVMLOCK = 0x55;
+    NVMLOCK = 0xAA;
+    NVMCON0bits.GO = 1;
+    INTERRUPTbits_GIEH = 1;
+
+    // Wait for write to complete
+    while (NVMCON0bits.GO);     // Blocking loop
+
+    // Avoid accidental writes
+    NVMCON1bits.NVMCMD = 0b000;
+#endif
 }
 
 /**

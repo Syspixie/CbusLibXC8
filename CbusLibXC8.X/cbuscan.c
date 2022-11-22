@@ -61,6 +61,8 @@
  * 
  * @author Konrad Orlowski
  * @date August 2022
+ * 
+ * CAN peripheral specific code handed off to ecan or can1.
  */
 
 
@@ -71,15 +73,7 @@
 #include "eeprom.h"
 #include "opcode.h"
 
-#if defined(CAN1_BUFFERS_BASE_ADDRESS)
-#include "can1.h"
-#define initCan initCan1
-#define canSendRtrRequest can1SendRtrRequest
-#define canSendRtrResponse can1SendRtrResponse
-#define canTransmit can1Transmit
-#define canReceive can1Receive
-#define canTimerIsr can1TimerIsr
-#else
+#if defined(ECAN_BUFFERS_BASE_ADDRESS)
 #include "ecan.h"
 #define initCan initEcan
 #define canSendRtrRequest ecanSendRtrRequest
@@ -88,13 +82,22 @@
 #define canReceive ecanReceive
 #define canTimerIsr ecanTimerIsr
 #endif
+#if defined(CAN1_BUFFERS_BASE_ADDRESS)
+#include "can1.h"
+#define initCan initCan1
+#define canSendRtrRequest can1SendRtrRequest
+#define canSendRtrResponse can1SendRtrResponse
+#define canTransmit can1Transmit
+#define canReceive can1Receive
+#define canTimerIsr can1TimerIsr
+#endif
 
 
+// Used to convert 7-bit CBUS CAN ID to a CAN standard ID
 #define CAN_BUS_ID_UPPER_BITS 0b10110000000
 
 
 // CAN ID self-enumeration process state
-
 typedef enum {
     selfEnumIsInactive, // No self-enumeration
     selfEnumIsPending, // Self-enumeration to start after 'holdoff' time
@@ -107,7 +110,6 @@ typedef enum {
 uint8_t canBusID; // CBUS 7-bit CAN ID
 bytes16_t encodedCanBusID; // CBUS CAN ID + priority bits encoded as standard CAN ID in SIDL/SIDH pair
 uint8_t cbusMsg[8]; // CBUS message (8 bytes)
-
 
 enum_t selfEnumStatus = selfEnumIsInactive; // Self-enumeration state
 bool selfEnumSendResult = false; // Send result flag
@@ -122,7 +124,7 @@ void initCbusCan() {
 
     initCan();
 
-    // Encode the initial CAN ID
+    // Encode the initial CanBusID
     encodedCanBusID.value = (uint16_t) (CAN_BUS_ID_UPPER_BITS | canBusID) << 5;
 }
 
@@ -212,9 +214,19 @@ static void queueTransmit(int8_t tx) {
     // Add our node number if required by the opcode
     opCodeAddNodeNumber();
 
+    // Add to transmit FIFO
     canTransmit();
 }
 
+/**
+ * Checks for a CBUS message; handles self-enumeration messages.
+ * 
+ * @param id message CAN ID
+ * @param dlc message DLC
+ * @param data message data
+ * @return true if CBUS message found
+ * @post cbusMsg[] CBUS message
+ */
 static bool preProcessMessage(uint8_t id, uint8_t dlc, volatile uint8_t* data) {
 
     // If RTR flag is set, and zero data specified...
@@ -249,11 +261,11 @@ static bool preProcessMessage(uint8_t id, uint8_t dlc, volatile uint8_t* data) {
         selfEnumStatus = selfEnumIsPending;
         selfEnumStartedMillis = getMillisShort();
 
-        // Not a CBUS message
+        // Ignore, even if a CBUS message
         return false;
     }
 
-    // CBUS message; copy data
+    // We have a CBUS message; copy data
     utilMemcpy(cbusMsg, data, 8);
     return true;
 }
@@ -357,12 +369,17 @@ bool setCbusCanID(uint8_t newCanID, bool check) {
  */
 void cbusCanIsr() {
 
+    // Call ECAN ISR
     ecanIsr();
 }
 #endif
 
+/**
+ * Performs regular CAN bus operations (called every millisecond).
+ */
 void cbusCanTimerIsr(void) {
 
+    // Call ECAN or CAN1 ISR
     canTimerIsr();
 }
 

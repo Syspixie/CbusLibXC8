@@ -68,6 +68,8 @@
 extern "C" {
 #endif
 
+#if defined(ECAN_BUFFERS_BASE_ADDRESS)
+
 
 #include "global.h"
 #include "cancommon.h"
@@ -90,6 +92,8 @@ extern "C" {
 #endif
     void ecanTimerIsr(void);
 
+
+#endif  /* ECAN_BUFFERS_BASE_ADDRESS */
 
 #ifdef	__cplusplus
 }

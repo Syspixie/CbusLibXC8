@@ -90,6 +90,8 @@
  * [ See Microchip application note AN930 for ECAN code example ]
  */
 
+#if defined(ECAN_BUFFERS_BASE_ADDRESS)
+
 
 #include "ecan.h"
 #include "hardware.h"
@@ -103,9 +105,12 @@
 #define RX_FIFO_CUR_LENGTH ((uint8_t) (rxFifoNewest - rxFifoOldest))
 #define TX_FIFO_CUR_LENGTH ((uint8_t) (txFifoNewest - txFifoOldest))
 
+#define TX_PRIORITY_HIKE_MILLIS 750     // 0.75 seconds
+#define TX_TIMEOUT_MILLIS 1000          // 1 second
+
+
 // ECANCON register EWIN<4:0> bits determine which RX/TX buffer is mapped into
 // the Access Bank address (ECAN_BUFFERS_BASE_ADDRESS)
-
 typedef enum {
     ewinTX = 0b00011,
     ewinTXB0 = 0b00011,
@@ -123,7 +128,6 @@ typedef enum {
 } ewin_t;
 
 // RX/TX buffer location names mapped to ECAN_BUFFERS_BASE_ADDRESS
-
 volatile struct {
     union {
         uint8_t CON;
@@ -142,9 +146,6 @@ volatile struct {
     uint8_t data[8];
 } ewin __at(ECAN_BUFFERS_BASE_ADDRESS);
 
-
-#define CBUSCAN_TX_PRIORITY_HIKE_MILLIS 750     // 0.75 seconds
-#define CBUSCAN_TX_TIMEOUT_MILLIS 1000          // 1 second
 
 // extern
 #ifdef INCLUDE_CBUS_CAN_STATS
@@ -168,6 +169,9 @@ uint16_t txb1StartedMillis;
 uint16_t txb2StartedMillis;
 
 
+/**
+ * Initialises the ECAN peripheral.
+ */
 void initEcan() {
 
     CANCON = 0x80;
@@ -286,6 +290,11 @@ void initEcan() {
     ewin.CON = 0b00000011; // Priority 3 (highest)
 }
 
+/**
+ * Sends an RTR request.
+ * 
+ * @pre encodedCanBusID populated
+ */
 void ecanSendRtrRequest() {
 
     // Send RTR request, which will trigger a response from all currently
@@ -298,9 +307,15 @@ void ecanSendRtrRequest() {
     ewin.TXCONbits.TXREQ = 1;
     INTERRUPTbits_GIEL = 1;
 
+    // Note time for timeout checking
     txb1StartedMillis = getMillisShort();
 }
 
+/**
+ * Sends an RTR response.
+ * 
+ * @pre encodedCanBusID populated
+ */
 void ecanSendRtrResponse() {
 
     // Send response which includes our CAN ID
@@ -312,9 +327,16 @@ void ecanSendRtrResponse() {
     ewin.TXCONbits.TXREQ = 1;
     INTERRUPTbits_GIEL = 1;
 
+    // Note time for timeout checking
     txb2StartedMillis = getMillisShort();
 }
 
+/**
+ * Sends a CBUS message.
+ * 
+ * @pre encodedCanBusID populated
+ * @pre message in cbusMsg[]
+ */
 void ecanTransmit() {
 
     // If room in the FIFO...
@@ -343,6 +365,13 @@ void ecanTransmit() {
     }
 }
 
+/**
+ * Receives a message.
+ * 
+ * @param msgCheckFunc function to pre-process message and check for CBUS message
+ * @return -1: no message; 0: not a CBUS message; 1: is a CBUS message
+ * @post cbusMsg[] CBUS message
+ */
 int8_t ecanReceive(bool (* msgCheckFunc)(uint8_t id, uint8_t dlc, volatile uint8_t* data)) {
 
     // If no messages, we're done
@@ -458,7 +487,7 @@ static void txCheckTimeoutIsr(uint16_t started) {
     // If transmit has been running at low priority (as determined by the top
     // CAN ID bits) for some time, abort it, change to high priority, then
     // restart it.
-    if ((ewin.SIDH & 0b11000000) && tSince >= CBUSCAN_TX_PRIORITY_HIKE_MILLIS) {
+    if ((ewin.SIDH & 0b11000000) && tSince >= TX_PRIORITY_HIKE_MILLIS) {
         ewin.TXCONbits.TXREQ = 0; // Abort
         ewin.SIDH &= ~0b11000000; // Set highest priority
         ewin.TXCONbits.TXREQ = 1; // Retry
@@ -467,7 +496,7 @@ static void txCheckTimeoutIsr(uint16_t started) {
 #endif
 
         // If transmit has been running for too long, abort it.
-    } else if (tSince >= CBUSCAN_TX_TIMEOUT_MILLIS) {
+    } else if (tSince >= TX_TIMEOUT_MILLIS) {
         ewin.TXCONbits.TXREQ = 0; // Abort
 #ifdef INCLUDE_CBUS_CAN_STATS
         ++stats.txTmoErr;
@@ -610,7 +639,7 @@ void ecanIsr() {
 #endif
 
 /**
- * Performs regular CAN bus operations (called every millisecond).
+ * Performs regular ECAN operations (called every millisecond).
  */
 void ecanTimerIsr() {
 
@@ -628,3 +657,6 @@ void ecanTimerIsr() {
 
 
 // </editor-fold>
+
+
+#endif  /* ECAN_BUFFERS_BASE_ADDRESS */

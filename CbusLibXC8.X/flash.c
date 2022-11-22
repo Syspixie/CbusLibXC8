@@ -64,7 +64,7 @@
  * 
  * @note To avoid using 24-bit address pointers on an MCU which has only 64K
  * memory, the address data type is flashAddr_t, which is set to uint16_t or
- * uint24_t as appropriate (see moduledefs.h).
+ * uint24_t as appropriate (see flash.h and hardware.h).
  */
 
 
@@ -84,7 +84,7 @@ typedef union {
 
 uint8_t cacheData[FLASH_BLOCK_SIZE];        // Cache
 flashAddr_t cachedBlock;                    // Currently cached memory block (on FLASH_BLOCK_SIZE boundary)
-uint8_t cacheOffset;                        // Current byte offset within cachedBlock
+flashBlock_t cacheOffset;                   // Current byte offset within cachedBlock
 cacheStatus_t cacheStatus;                  // Cache status flags
 
 
@@ -172,8 +172,23 @@ static void eraseCache() {
 
     TBLPTR = cachedBlock;
 
+#if defined(CPU_FAMILY_PIC18_K80)
     // Set up erase
-    NVMCON1 = NVM_ERASE_FLASH;
+    EECON1 = 0b10010100;
+
+    // Perform erase with all interrupts temporarily disabled
+    INTERRUPTbits_GIEH = 0;
+    EECON2 = 0x55;
+    EECON2 = 0xAA;
+    EECON1bits.WR = 1;
+    INTERRUPTbits_GIEH = 1;
+
+    // Avoid accidental writes
+    EECON1 = 0b00000000;
+#endif
+#if defined(CPU_FAMILY_PIC18_K83)
+    // Set up erase
+    NVMCON1 = 0b10010100;
 
     // Perform erase with all interrupts temporarily disabled
     INTERRUPTbits_GIEH = 0;
@@ -181,6 +196,27 @@ static void eraseCache() {
     NVMCON2 = 0xAA;
     NVMCON1bits.WR = 1;
     INTERRUPTbits_GIEH = 1;
+
+    // Avoid accidental writes
+    NVMCON1 = 0b00000000;
+#endif
+#if defined(CPU_FAMILY_PIC18_Q83)
+    // Set up erase
+    NVMCON1bits.NVMCMD = 0b110;
+
+    // Perform erase with all interrupts temporarily disabled
+    INTERRUPTbits_GIEH = 0;
+    NVMLOCK = 0x55;
+    NVMLOCK = 0xAA;
+    NVMCON0bits.GO = 1;
+    INTERRUPTbits_GIEH = 1;
+
+    // Wait for erase to complete
+    while (NVMCON0bits.GO);
+
+    // Avoid accidental writes
+    NVMCON1bits.NVMCMD = 0b000;
+#endif
 
     // Update cache status
     cacheStatus.requiresErase = 0;
@@ -210,7 +246,7 @@ static void flushCache() {
 
     // Populate the internal write buffer with the contents of the cache
     uint8_t* p = cacheData;
-    uint8_t n = FLASH_BLOCK_SIZE;
+    flashBlock_t n = FLASH_BLOCK_SIZE;
     while (n > 1) {             // Write all but the last byte
         TABLAT = *p++;
         asm("TBLWTPOSTINC");
@@ -219,8 +255,23 @@ static void flushCache() {
     TABLAT = *p;                // Last byte
     asm("TBLWT");
 
+#if defined(CPU_FAMILY_PIC18_K80)
     // Set up write
-    NVMCON1 = NVM_WRITE_FLASH;
+    EECON1 = 0b10000100;
+
+    // Perform write with all interrupts temporarily disabled
+    INTERRUPTbits_GIEH = 0;
+    EECON2 = 0x55;
+    EECON2 = 0xAA;
+    EECON1bits.WR = 1;
+    INTERRUPTbits_GIEH = 1;
+
+    // Avoid accidental writes
+    EECON1 = 0b00000000;
+#endif
+#if defined(CPU_FAMILY_PIC18_K83)
+    // Set up write
+    NVMCON1 = 0b10000100;
 
     // Perform write with all interrupts temporarily disabled
     INTERRUPTbits_GIEH = 0;
@@ -228,6 +279,27 @@ static void flushCache() {
     NVMCON2 = 0xAA;
     NVMCON1bits.WR = 1;
     INTERRUPTbits_GIEH = 1;
+
+    // Avoid accidental writes
+    NVMCON1 = 0b00000000;
+#endif
+#if defined(CPU_FAMILY_PIC18_Q83)
+    // Set up erase
+    NVMCON1bits.NVMCMD = 0b101;
+
+    // Perform write with all interrupts temporarily disabled
+    INTERRUPTbits_GIEH = 0;
+    NVMLOCK = 0x55;
+    NVMLOCK = 0xAA;
+    NVMCON0bits.GO = 1;
+    INTERRUPTbits_GIEH = 1;
+
+    // Wait for write to complete
+    while (NVMCON0bits.GO);
+
+    // Avoid accidental writes
+    NVMCON1bits.NVMCMD = 0b000;
+#endif
 
     // Update cache status
     cacheStatus.isModified = 0;
@@ -264,7 +336,7 @@ static void loadBlock(flashAddr_t addr) {
     }
 
     // Set the cache block offset (the next byte to be read/written)
-    cacheOffset = (uint8_t) (addr & (FLASH_BLOCK_SIZE - 1));
+    cacheOffset = (flashBlock_t) (addr & (FLASH_BLOCK_SIZE - 1));
 }
 
 /**

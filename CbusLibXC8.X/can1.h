@@ -68,6 +68,8 @@
 extern "C" {
 #endif
 
+#if defined(CAN1_BUFFERS_BASE_ADDRESS)
+
 
 #include "global.h"
 #include "cancommon.h"
@@ -80,6 +82,8 @@ extern "C" {
     int8_t can1Receive(bool (* msgCheckFunc)(uint8_t id, uint8_t dlc, volatile uint8_t* data));
     void can1TimerIsr(void);
 
+
+#endif  /* CAN1_BUFFERS_BASE_ADDRESS */
 
 #ifdef	__cplusplus
 }

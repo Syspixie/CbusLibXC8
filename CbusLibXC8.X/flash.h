@@ -74,6 +74,7 @@ extern "C" {
 
 
     typedef FLASH_ADDRESS_TYPE flashAddr_t;
+    typedef FLASH_BLOCK_TYPE flashBlock_t;
 
 
     void initFlash(void);

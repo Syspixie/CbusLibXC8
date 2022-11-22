@@ -69,6 +69,8 @@
  * filtered out in hardware.  Bus speed is set at 125kbps.
  */
 
+#if defined(CAN1_BUFFERS_BASE_ADDRESS)
+
 
 #include "can1.h"
 #include "hardware.h"
@@ -78,8 +80,9 @@
 #include "module.h"
 
 
-#define CBUSCAN_TX_PRIORITY_HIKE_MILLIS 750     // 0.75 seconds
-#define CBUSCAN_TX_TIMEOUT_MILLIS 1000          // 1 second
+#define TX_PRIORITY_HIKE_MILLIS 750     // 0.75 seconds
+#define TX_TIMEOUT_MILLIS 1000          // 1 second
+
 
 // extern
 #ifdef INCLUDE_CBUS_CAN_STATS
@@ -87,28 +90,45 @@ volatile stats_t stats = {.bytes =
     {[0 ... sizeof (stats.bytes) - 1] = 0}};
 #endif
 
-// Transmit buffer start times for determining timeout
-uint16_t txb0StartedMillis;
-uint16_t txb1StartedMillis;
-uint16_t txb2StartedMillis;
 
-
+/**
+ * Initialises the CAN1 peripheral.
+ */
 void initCan1() {
 }
 
+/**
+ * Sends an RTR request.
+ * 
+ * @pre encodedCanBusID populated
+ */
 void can1SendRtrRequest() {
-
-    txb1StartedMillis = getMillisShort();
 }
 
+/**
+ * Sends an RTR response.
+ * 
+ * @pre encodedCanBusID populated
+ */
 void can1SendRtrResponse() {
-
-    txb2StartedMillis = getMillisShort();
 }
 
+/**
+ * Sends a CBUS message.
+ * 
+ * @pre encodedCanBusID populated
+ * @pre message in cbusMsg[]
+ */
 void can1Transmit() {
 }
 
+/**
+ * Receives a message.
+ * 
+ * @param msgCheckFunc function to pre-process message and check for CBUS message
+ * @return -1: no message; 0: not a CBUS message; 1: is a CBUS message
+ * @post cbusMsg[] CBUS message
+ */
 int8_t can1Receive(bool (* msgCheckFunc)(uint8_t id, uint8_t dlc, volatile uint8_t* data)) {
 
     return 0;
@@ -119,7 +139,7 @@ int8_t can1Receive(bool (* msgCheckFunc)(uint8_t id, uint8_t dlc, volatile uint8
 
 
 /**
- * Performs regular CAN bus operations (called every millisecond).
+ * Performs regular CAN1 operations (called every millisecond).
  */
 void can1TimerIsr() {
 
@@ -127,3 +147,6 @@ void can1TimerIsr() {
 
 
 // </editor-fold>
+
+
+#endif  /* CAN1_BUFFERS_BASE_ADDRESS */
