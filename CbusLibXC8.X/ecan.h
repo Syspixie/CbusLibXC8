@@ -71,14 +71,20 @@ extern "C" {
 
 #include "global.h"
 #include "hardware.h"
-#include "cancommon.h"
 
 #if defined(ECAN_BUFFERS_BASE_ADDRESS)
 
 
     typedef struct {        
         uint8_t id;     // Used for receive only
-        uint8_t dlc;
+        union {
+            struct {
+                unsigned DLC : 4;
+                unsigned reserved : 2;
+                unsigned RTR : 1;
+            } dlcBits;
+            uint8_t dlc;
+        };
         uint8_t data[8];
     } canFrame_t;
 

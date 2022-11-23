@@ -138,7 +138,6 @@ volatile struct {
     uint8_t SIDL;
     uint8_t EIDH;
     uint8_t EIDL;
-
     union {
         uint8_t DLC;
         B0DLCbits_t DLCbits;
@@ -372,7 +371,7 @@ void ecanTransmit() {
  * @return -1: no message; 0: not a CBUS message; 1: is a CBUS message
  * @post cbusMsg[] CBUS message
  */
-int8_t ecanReceive(bool (* msgCheckFunc)(uint8_t id, uint8_t dlc, volatile uint8_t* data)) {
+int8_t ecanReceive(bool (* msgCheckFunc)(uint8_t id, uint8_t dataLen, volatile uint8_t* data)) {
 
     // If no messages, we're done
     if (RX_FIFO_CUR_LENGTH == 0) return -1;
@@ -381,7 +380,8 @@ int8_t ecanReceive(bool (* msgCheckFunc)(uint8_t id, uint8_t dlc, volatile uint8
     uint8_t idx = rxFifoOldest % RX_FIFO_LENGTH;
 
     // Check for CBUS message
-    bool haveMsg = msgCheckFunc(rxFifo[idx].id, rxFifo[idx].dlc, rxFifo[idx].data);
+    volatile uint8_t* data = (rxFifo[idx].dlcBits.RTR) ? NULL : rxFifo[idx].data;
+    bool haveMsg = msgCheckFunc(rxFifo[idx].id, rxFifo[idx].dlcBits.DLC, data);
 
     // Update FIFO
     ++rxFifoOldest;

@@ -24,7 +24,6 @@
       <itemPath>util.h</itemPath>
       <itemPath>hardware.h</itemPath>
       <itemPath>ports.h</itemPath>
-      <itemPath>cancommon.h</itemPath>
       <itemPath>ecan.h</itemPath>
       <itemPath>can1.h</itemPath>
     </logicalFolder>

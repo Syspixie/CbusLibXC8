@@ -129,7 +129,7 @@ void can1Transmit() {
  * @return -1: no message; 0: not a CBUS message; 1: is a CBUS message
  * @post cbusMsg[] CBUS message
  */
-int8_t can1Receive(bool (* msgCheckFunc)(uint8_t id, uint8_t dlc, volatile uint8_t* data)) {
+int8_t can1Receive(bool (* msgCheckFunc)(uint8_t id, uint8_t dataLen, volatile uint8_t* data)) {
 
     return 0;
 }

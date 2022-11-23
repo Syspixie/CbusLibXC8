@@ -222,30 +222,34 @@ static void queueTransmit(int8_t tx) {
  * Checks for a CBUS message; handles self-enumeration messages.
  * 
  * @param id message CAN ID
- * @param dlc message DLC
- * @param data message data
+ * @param dataLen number of bytes in message
+ * @param data message data, or NULL if RTR
  * @return true if CBUS message found
  * @post cbusMsg[] CBUS message
  */
-static bool preProcessMessage(uint8_t id, uint8_t dlc, volatile uint8_t* data) {
+static bool preProcessMessage(uint8_t id, uint8_t dataLen, volatile uint8_t* data) {
 
-    // If RTR flag is set, and zero data specified...
-    if (dlc & 0b01000000) {
+    // If RTR...
+    if (!data) {
 
-        // Some other node is doing self-enumeration
-        // Send response which includes our CAN ID
-        canSendRtrResponse();
+        // Only interested if zero data...
+        if (dataLen == 0) {
 
-        // If we have self-enumeration pending, extend the wait to allow other
-        // process to finish
-        if (selfEnumStatus == selfEnumIsPending) selfEnumStartedMillis = getMillisShort();
+            // Some other node is doing self-enumeration
+            // Send response which includes our CAN ID
+            canSendRtrResponse();
+
+            // If we have self-enumeration pending, extend the wait to allow other
+            // process to finish
+            if (selfEnumStatus == selfEnumIsPending) selfEnumStartedMillis = getMillisShort();
+        }
 
         // Not a CBUS message
         return false;
     }
 
     // If zero data, must be response to our RTR...
-    if (dlc == 0) {
+    if (dataLen == 0) {
 
         // Set bitmap bit corresponding to received CAN ID
         selfEnumBitmap[id >> 3] |= 1 << (id & 0b00000111);
@@ -266,7 +270,7 @@ static bool preProcessMessage(uint8_t id, uint8_t dlc, volatile uint8_t* data) {
     }
 
     // We have a CBUS message; copy data
-    utilMemcpy(cbusMsg, data, 8);
+    utilMemcpy(cbusMsg, data, dataLen);
     return true;
 }
 

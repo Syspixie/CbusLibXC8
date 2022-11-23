@@ -71,7 +71,6 @@ extern "C" {
 
 #include "global.h"
 #include "hardware.h"
-#include "cancommon.h"
 
 #if defined(CAN1_BUFFERS_BASE_ADDRESS)
 
@@ -80,7 +79,7 @@ extern "C" {
     void can1SendRtrRequest(void);
     void can1SendRtrResponse(void);
     void can1Transmit(void);
-    int8_t can1Receive(bool (* msgCheckFunc)(uint8_t id, uint8_t dlc, volatile uint8_t* data));
+    int8_t can1Receive(bool (* msgCheckFunc)(uint8_t id, uint8_t dataLen, volatile uint8_t* data));
     void can1TimerIsr(void);
 
 
