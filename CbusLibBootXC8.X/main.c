@@ -76,6 +76,36 @@
 #define APPLICATION_BASE_ADDRESS 0x000800
 #define EEPROM_BOOT_FLAG EEPROM_TOP
 
+#if defined(CPU_FAMILY_PIC18_K80)
+#define CONFIG_UPPER_BYTE 0x30
+#define EEPROM_UPPER_BYTE 0xF0
+#define NVM_READ_EEPROM 0b00000000
+#define NVM_WRITE_EEPROM 0b00000100
+#define NVM_WRITE_CONFIG 0b01000100
+#define NVM_WRITE_FLASH 0b10000100
+#define NVM_ERASE_FLASH 0b10010100
+#define NVMADRL EEADR
+#define NVMADRH EEADRH
+#define NVMDAT EEDATA
+#endif
+#if defined(CPU_FAMILY_PIC18_K83)
+#define CONFIG_UPPER_BYTE 0x30
+#define EEPROM_UPPER_BYTE 0x31
+#define NVM_READ_EEPROM 0b00000000
+#define NVM_WRITE_EEPROM 0b00000100
+#define NVM_WRITE_CONFIG 0b01000100
+#define NVM_WRITE_FLASH 0b10000100
+#define NVM_ERASE_FLASH 0b10010100
+#endif
+#if defined(CPU_FAMILY_PIC18_Q83)
+#define CONFIG_UPPER_BYTE 0x30
+#define EEPROM_UPPER_BYTE 0x38
+#define NVM_READ_EEPROM 0b000
+#define NVM_WRITE_EEPROM 0b011
+#define NVM_WRITE_CONFIG 0b011
+#define NVM_WRITE_FLASH 0b101
+#define NVM_ERASE_FLASH 0b110
+#endif
 
 // Status flags
 typedef union {
@@ -131,8 +161,8 @@ asm("ORG " ___mkstr(EEPROM_BOOT_FLAG - 7));
 __EEPROM_DATA(0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00);
 
 
-// EWIN_ADDRESS is the address of RXB0, which is handy...
-volatile buff_t rxBuff __at(EWIN_ADDRESS + 6);  // RXB0 D0-D7
+// ECAN_BUFFERS_BASE_ADDRESS is the address of RXB0, which is handy...
+volatile buff_t rxBuff __at(ECAN_BUFFERS_BASE_ADDRESS + 6);  // RXB0 D0-D7
 buff_t buff;                        // Copy of RXB0 D0-D7
 uint8_t buffLen;                    // # bytes sent
 
@@ -143,28 +173,49 @@ status_t status;                    // Status flags
 /**
  * Reads an EEPROM location.
  * 
- * @pre NVMADRL & NVMADRH set.
+ * @pre NVMADR set.
  * @return Byte read.
  */
 static uint8_t readEeprom() {
 
-    // Initiate read
-    NVMCON1 = NVM_READ_EEPROM;
-    NVMCON1bits.RD = 1;
-
 #if defined(CPU_FAMILY_PIC18_K80)
+    // Set up read
+    EECON1 = NVM_READ_EEPROM;
+
+    // Initiate read
+    EECON1bits.RD = 1;
+
     // Wait for read to complete
     NOP();
     NOP();
+    
+    return EEDATA;
 #endif
+#if defined(CPU_FAMILY_PIC18_K83)
+    // Set up read
+    NVMCON1 = NVM_READ_EEPROM;
 
-    // Return byte
+    // Initiate read
+    NVMCON1bits.RD = 1;
+    
     return NVMDAT;
+#endif
+#if defined(CPU_FAMILY_PIC18_Q83)
+    // Set up read
+    NVMADRU = 0x38;
+    NVMCON1bits.NVMCMD = NVM_READ_EEPROM;
+
+    // Initiate read
+    NVMCON0bits.GO = 1;
+    
+    return NVMDATL;
+#endif
 }
 
 /**
  * Performs memory write operation.
  * 
+ * @pre Data written to holding registers and appropriate address registers set
  * @param nvmOp Operation to be performed.
  * 
  * @note The routine waits for the completion of the operation - which can be
@@ -181,14 +232,42 @@ static void writeMemory(uint8_t nvmOp) {
     // Only write if unlocked
     if (!buff.ctl.writeUnlock) return;
 
-    // Initiate write
+#if defined(CPU_FAMILY_PIC18_K80)
+    // Set up write
+    EECON1 = nvmOp;
+
+    // Perform write
+    EECON2 = 0x55;
+    EECON2 = 0xAA;
+    EECON1bits.WR = 1;
+
+    // Wait for write to complete
+    while (EECON1bits.WR);
+#endif
+#if defined(CPU_FAMILY_PIC18_K83)
+    // Set up write
     NVMCON1 = nvmOp;
+
+    // Perform write
     NVMCON2 = 0x55;
     NVMCON2 = 0xAA;
     NVMCON1bits.WR = 1;
 
     // Wait for write to complete
-    while (NVMCON1bits.WR);      // Blocking loop
+    while (NVMCON1bits.WR);
+#endif
+#if defined(CPU_FAMILY_PIC18_Q83)
+    // Set up write
+    NVMCON1bits.NVMCMD = nvmOp;
+
+    // Perform write
+    NVMLOCK = 0x55;
+    NVMLOCK = 0xAA;
+    NVMCON0bits.GO = 1;
+
+    // Wait for write to complete
+    while (NVMCON0bits.GO);
+#endif
 }
 
 /**
@@ -207,7 +286,7 @@ static void eraseFlash() {
     // Set the erase address
     TBLPTR = buff.memAddr.value;
 
-    // Perform erase
+    // Erase FLASH
     writeMemory(NVM_ERASE_FLASH);
 }
 
@@ -266,7 +345,7 @@ static void writeFlash() {
  * 
  * @pre Data in rxBuff.
  * @pre Data length in buffLen.
- * @pre Address in buff.memAddr; must be in the range 0x300000 to 0x30000D.
+ * @pre Address in buff.memAddr; upper byte must match CONFIG_UPPER_BYTE.
  * 
  * @note Each data byte is added to the checksum value.
  * @note Bytes written are read and optionally verified.
@@ -303,7 +382,7 @@ static void writeConfig() {
  * 
  * @pre Data in rxBuff.
  * @pre Data length in buffLen.
- * @pre Address in buff.memAddr; must be in the range 0xF00000 to 0xF003FF.
+ * @pre Address in buff.memAddr; upper byte must match EEPROM_UPPER_BYTE.
  * 
  * @note Each data byte is added to the checksum value.
  * @note Bytes written are read and verified.
@@ -313,6 +392,9 @@ static void writeEeprom() {
     // Set the write address
     NVMADRL = buff.memAddr.valueL;
     NVMADRH = buff.memAddr.valueH;
+#if defined(CPU_FAMILY_PIC18_Q83)
+    NVMADRU = buff.memAddr.valueU;
+#endif
 
     for (uint8_t i = 0; i < buffLen; ++i) {
 
@@ -362,6 +444,9 @@ static void startApplication() {
     // Set up address of bootloader flag
     NVMADRL = EEPROM_BOOT_FLAG & 0xFF;
     NVMADRH = EEPROM_BOOT_FLAG >> 8;
+#if defined(CPU_FAMILY_PIC18_Q83)
+    NVMADRU = EEPROM_UPPER_BYTE;
+#endif
 
     // Clear bootloader flag
     NVMDAT = 0x00;
@@ -378,6 +463,9 @@ void main() __at(0x0020) {
     // Set up address of bootloader flag
     NVMADRL = EEPROM_BOOT_FLAG & 0xFF;
     NVMADRH = EEPROM_BOOT_FLAG >> 8;
+#if defined(CPU_FAMILY_PIC18_Q83)
+    NVMADRU = EEPROM_UPPER_BYTE;
+#endif
 
     // If bootloader flag is not set jump to application start
     if (readEeprom() != 0xFF) {
@@ -498,23 +586,23 @@ void main() __at(0x0020) {
 
             //********* Received PUT data
 
-            // Upper nibble of upper address byte determines memory type
-            uint8_t m = buff.memAddr.valueU >> 4;
-            if (m < 0x3) {
+            // Upper address byte determines memory type
+            uint8_t m = buff.memAddr.valueU;
+            if (m < CONFIG_UPPER_BYTE) {
 
                 // Erase and write to FLASH
                 if (buff.ctl.autoErase) eraseFlash();
                 if (!buff.ctl.eraseOnly) writeFlash();
 
-            } else if (m == 0xF) {
-
-                // Write to EEPROM
-                writeEeprom();
-
-            } else if (m == 0x3) {
+            } else if (m == CONFIG_UPPER_BYTE) {
 
                 // Write to configuration values
                 writeConfig();
+
+            } else if (m == EEPROM_UPPER_BYTE) {
+
+                // Write to EEPROM
+                writeEeprom();
 
             }
 

@@ -68,11 +68,12 @@
 extern "C" {
 #endif
 
-#if defined(ECAN_BUFFERS_BASE_ADDRESS)
-
 
 #include "global.h"
+#include "hardware.h"
 #include "cancommon.h"
+
+#if defined(ECAN_BUFFERS_BASE_ADDRESS)
 
 
     typedef struct {        

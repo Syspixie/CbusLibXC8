@@ -78,6 +78,7 @@ extern "C" {
 #define FLASH_TOP 0x007FFF              // 32K bytes
 #define FLASH_ADDRESS_TYPE uint16_t
 #define FLASH_BLOCK_SIZE 64             // Erase & write
+#define FLASH_BLOCK_TYPE uint8_t
 #define EEPROM_TOP 0x03FF               // 1024 bytes
 #endif
 #if defined(_18F26K80) || defined(_18LF26K80)
@@ -86,6 +87,7 @@ extern "C" {
 #define FLASH_TOP 0x00FFFF              // 64K bytes
 #define FLASH_ADDRESS_TYPE uint16_t
 #define FLASH_BLOCK_SIZE 64             // Erase & write
+#define FLASH_BLOCK_TYPE uint8_t
 #define EEPROM_TOP 0x03FF               // 1024 bytes
 #endif
 #if defined(_18F25K83) || defined(_18LF25K83)
@@ -94,6 +96,7 @@ extern "C" {
 #define FLASH_TOP 0x007FFF              // 32K bytes
 #define FLASH_ADDRESS_TYPE uint16_t
 #define FLASH_BLOCK_SIZE 128            // Erase & write
+#define FLASH_BLOCK_TYPE uint8_t
 #define EEPROM_TOP 0x03FF               // 1024 bytes
 #endif
 #if defined(_18F26K83) || defined(_18LF26K83)
@@ -102,6 +105,7 @@ extern "C" {
 #define FLASH_TOP 0x00FFFF              // 64K bytes
 #define FLASH_ADDRESS_TYPE uint16_t
 #define FLASH_BLOCK_SIZE 128            // Erase & write
+#define FLASH_BLOCK_TYPE uint8_t
 #define EEPROM_TOP 0x03FF               // 1024 bytes
 #endif
 #if defined(_18F27Q83)
@@ -110,6 +114,7 @@ extern "C" {
 #define FLASH_TOP 0x01FFFF              // 128K bytes
 #define FLASH_ADDRESS_TYPE uint24_t
 #define FLASH_BLOCK_SIZE 256            // Erase & write
+#define FLASH_BLOCK_TYPE uint16_t
 #define EEPROM_TOP 0x03FF               // 1024 bytes
 #endif
 
@@ -118,33 +123,19 @@ extern "C" {
 #if defined(CPU_FAMILY_PIC18_K80)
 #define INTERRUPTbits_GIEH INTCONbits.GIEH
 #define INTERRUPTbits_GIEL INTCONbits.GIEL
-#define EWIN_ADDRESS 0x0F60     // Access Bank address (RXB0CON)
+#define ECAN_BUFFERS_BASE_ADDRESS 0x0F60    // Access Bank address (RXB0CON)
 #endif
 #if defined(CPU_FAMILY_PIC18_K83)
 #define INTERRUPTbits_GIEH INTCON0bits.GIEH
 #define INTERRUPTbits_GIEL INTCON0bits.GIEL
 // Note: datasheet incorrectly specifies address as 0x0F60
-#define EWIN_ADDRESS 0x3F80     // Access Bank address (RXB0CON)
+#define ECAN_BUFFERS_BASE_ADDRESS 0x3F80    // Access Bank address (RXB0CON)
 #endif
 #if defined(CPU_FAMILY_PIC18_Q83)
 #define INTERRUPTbits_GIEH INTCON0bits.GIEH
 #define INTERRUPTbits_GIEL INTCON0bits.GIEL
+#define CAN1_BUFFERS_BASE_ADDRESS 0x3800
 #endif
-
-#if defined(CPU_FAMILY_PIC18_K80)
-#define NVMADRL EEADR
-#define NVMADRH EEADRH
-#define NVMCON1 EECON1
-#define NVMCON1bits EECON1bits
-#define NVMCON2  EECON2
-#define NVMDAT EEDATA
-#endif
- 
-#define NVM_READ_EEPROM 0b00000000
-#define NVM_WRITE_EEPROM 0b00000100
-#define NVM_WRITE_CONFIG 0b01000100
-#define NVM_WRITE_FLASH 0b10000100
-#define NVM_ERASE_FLASH 0b10010100
 
 
 #ifdef	__cplusplus

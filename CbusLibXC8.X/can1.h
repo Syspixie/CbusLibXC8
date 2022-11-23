@@ -68,11 +68,12 @@
 extern "C" {
 #endif
 
-#if defined(CAN1_BUFFERS_BASE_ADDRESS)
-
 
 #include "global.h"
+#include "hardware.h"
 #include "cancommon.h"
+
+#if defined(CAN1_BUFFERS_BASE_ADDRESS)
 
 
     void initCan1(void);

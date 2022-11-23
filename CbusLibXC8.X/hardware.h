@@ -137,21 +137,6 @@ extern "C" {
 #define CAN1_BUFFERS_BASE_ADDRESS 0x3800
 #endif
 
-//#if defined(CPU_FAMILY_PIC18_K80)
-//#define NVMADRL EEADR
-//#define NVMADRH EEADRH
-//#define NVMCON1 EECON1
-//#define NVMCON1bits EECON1bits
-//#define NVMCON2  EECON2
-//#define NVMDAT EEDATA
-//#endif
-// 
-//#define NVM_READ_EEPROM 0b00000000
-//#define NVM_WRITE_EEPROM 0b00000100
-//#define NVM_WRITE_CONFIG 0b01000100
-//#define NVM_WRITE_FLASH 0b10000100
-//#define NVM_ERASE_FLASH 0b10010100
-
 
 #ifdef	__cplusplus
 }

@@ -284,7 +284,7 @@ static void flushCache() {
     NVMCON1 = 0b00000000;
 #endif
 #if defined(CPU_FAMILY_PIC18_Q83)
-    // Set up erase
+    // Set up write
     NVMCON1bits.NVMCMD = 0b101;
 
     // Perform write with all interrupts temporarily disabled

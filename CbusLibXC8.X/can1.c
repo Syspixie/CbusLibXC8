@@ -69,8 +69,6 @@
  * filtered out in hardware.  Bus speed is set at 125kbps.
  */
 
-#if defined(CAN1_BUFFERS_BASE_ADDRESS)
-
 
 #include "can1.h"
 #include "hardware.h"
@@ -78,6 +76,8 @@
 #include "millis.h"
 #include "stats.h"
 #include "module.h"
+
+#if defined(CAN1_BUFFERS_BASE_ADDRESS)
 
 
 #define TX_PRIORITY_HIKE_MILLIS 750     // 0.75 seconds

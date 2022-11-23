@@ -90,8 +90,6 @@
  * [ See Microchip application note AN930 for ECAN code example ]
  */
 
-#if defined(ECAN_BUFFERS_BASE_ADDRESS)
-
 
 #include "ecan.h"
 #include "hardware.h"
@@ -99,6 +97,8 @@
 #include "millis.h"
 #include "stats.h"
 #include "module.h"
+
+#if defined(ECAN_BUFFERS_BASE_ADDRESS)
 
 
 #define RX_FIFO_WM_TARGET_LENGTH (RX_FIFO_LENGTH - 3)
