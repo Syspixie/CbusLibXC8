@@ -200,7 +200,7 @@ static void eraseCache() {
     // Avoid accidental writes
     NVMCON1 = 0b00000000;
 #endif
-#if defined(CPU_FAMILY_PIC18_Q83)
+#if defined(CPU_FAMILY_PIC18_Q83Q84)
     // Set up erase
     NVMCON1bits.NVMCMD = 0b110;
 
@@ -283,7 +283,7 @@ static void flushCache() {
     // Avoid accidental writes
     NVMCON1 = 0b00000000;
 #endif
-#if defined(CPU_FAMILY_PIC18_Q83)
+#if defined(CPU_FAMILY_PIC18_Q83Q84)
     // Set up write
     NVMCON1bits.NVMCMD = 0b101;
 

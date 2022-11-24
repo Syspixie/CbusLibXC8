@@ -119,7 +119,7 @@ void initMillis() {
     TMR0L = 0x00;
     TMR0H = 0xF9;
 #endif
-#if defined(CPU_FAMILY_PIC18_Q83)
+#if defined(CPU_FAMILY_PIC18_Q83Q84)
     // ToDo
 #endif
 }
@@ -207,7 +207,7 @@ void TMR0_ISR() {
 #if defined(CPU_FAMILY_PIC18_K83)
     PIR3bits.TMR0IF = 0;
 #endif
-#if defined(CPU_FAMILY_PIC18_Q83)
+#if defined(CPU_FAMILY_PIC18_Q83Q84)
     // ToDo
 #endif
 
@@ -215,7 +215,7 @@ void TMR0_ISR() {
     moduleTimerIsr();
 }
 
-#if defined(CPU_FAMILY_PIC18_K80)
+#if !defined(IVT_BASE_ADDRESS)
 /**
  * Service routine for TMR0 interrupts.
  */

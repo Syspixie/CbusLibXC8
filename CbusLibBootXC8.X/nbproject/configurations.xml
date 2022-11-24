@@ -510,7 +510,7 @@
                   value="Press to select which tool pack to use"/>
       </snap>
     </conf>
-    <conf name="Q83" type="2">
+    <conf name="Q83Q84" type="2">
       <toolsSet>
         <developmentServer>localhost</developmentServer>
         <targetDevice>PIC18F27Q83</targetDevice>

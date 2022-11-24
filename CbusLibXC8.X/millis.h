@@ -70,6 +70,7 @@ extern "C" {
 
 
 #include "global.h"
+#include "hardware.h"
 
 
     extern volatile bytes32_t millisTicks;
@@ -80,7 +81,7 @@ extern "C" {
     uint16_t getMillisShort(void);
     void delayMillis(uint32_t ms);
     void delayMillisShort(uint16_t ms);
-#if defined(CPU_FAMILY_PIC18_K80)
+#if !defined(IVT_BASE_ADDRESS)
     void millisIsr(void);
 #endif
 

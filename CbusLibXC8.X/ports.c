@@ -76,7 +76,7 @@ void initPorts() {
     RB2PPS = 0x33;      //RB2->ECAN:CANTX0;    
     CANRXPPS = 0x0B;    //RB3->ECAN:CANRX;    
 #endif
-#if defined(CPU_FAMILY_PIC18_Q83)
+#if defined(CPU_FAMILY_PIC18_Q83Q84)
     // ToDo
 #endif
 
@@ -109,7 +109,7 @@ void initPorts() {
     WPUC = 0b11111111;
     WPUE = 0b00000000;
 #endif
-#if defined(CPU_FAMILY_PIC18_Q83)
+#if defined(CPU_FAMILY_PIC18_Q83Q84)
     // ToDo
 #endif
 }

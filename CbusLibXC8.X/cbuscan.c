@@ -367,7 +367,7 @@ bool setCbusCanID(uint8_t newCanID, bool check) {
 // <editor-fold defaultstate="expanded" desc="OpCode handling routines">
 
 
-#if defined(CPU_FAMILY_PIC18_K80)
+#if !defined(IVT_BASE_ADDRESS)
 /**
  * Service routine for CAN interrupts.
  */

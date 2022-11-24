@@ -85,7 +85,7 @@ void __section("mainSec") main() {
 #if defined(CPU_FAMILY_PIC18_K83)
     INTCON0bits.IPEN = 1;           // Enable high/low interrupt priorities
 #endif
-#if defined(CPU_FAMILY_PIC18_Q83)
+#if defined(CPU_FAMILY_PIC18_Q83Q84)
     // ToDo
 #endif
 
@@ -111,7 +111,9 @@ void __section("mainSec") main() {
 // <editor-fold defaultstate="expanded" desc="Interrupt service routines">
 
 
-#if defined(CPU_FAMILY_PIC18_K80)
+#if defined(IVT_BASE_ADDRESS)
+void __interrupt(irq(default), base(IVT_BASE_ADDRESS)) Default_ISR() {}
+#else
 /**
  * High priority interrupt service handler.
  */
@@ -127,12 +129,6 @@ void __interrupt(low_priority) __section("mainSec") isrLow() {
 
     moduleLowPriorityIsr();
 }
-#endif
-#if defined(CPU_FAMILY_PIC18_K83)
-void __interrupt(irq(default), base(IVT_BASE_ADDRESS)) Default_ISR() {}
-#endif
-#if defined(CPU_FAMILY_PIC18_Q83)
-    // ToDo
 #endif
 
 

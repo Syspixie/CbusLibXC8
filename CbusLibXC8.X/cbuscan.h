@@ -70,6 +70,7 @@ extern "C" {
 
 
 #include "global.h"
+#include "hardware.h"
 
 
 #define CBUSCAN_MIN_DYNAMIC_CANID 1
@@ -86,7 +87,7 @@ extern "C" {
     void transmitCbusCan(void);
     void enumerateCbusCanID(bool sendResult);
     bool setCbusCanID(uint8_t newCanID, bool check);
-#if defined(CPU_FAMILY_PIC18_K80)
+#if !defined(IVT_BASE_ADDRESS)
     void cbusCanIsr(void);
 #endif
     void cbusCanTimerIsr(void);

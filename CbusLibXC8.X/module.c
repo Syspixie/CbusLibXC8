@@ -341,7 +341,7 @@ void nodeVarChanged(uint8_t varIndex, uint8_t oldValue, uint8_t newValue) {
 // <editor-fold defaultstate="expanded" desc="Interrupt service routines">
 
 
-#if defined(CPU_FAMILY_PIC18_K80)
+#if !defined(IVT_BASE_ADDRESS)
 /**
  * Called on high priority interrupt.
  */

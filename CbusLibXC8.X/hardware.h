@@ -109,7 +109,7 @@ extern "C" {
 #define EEPROM_TOP 0x03FF               // 1024 bytes
 #endif
 #if defined(_18F27Q83)
-#define CPU_FAMILY_PIC18_Q83
+#define CPU_FAMILY_PIC18_Q83Q84
 #define CPU_ID P18F27Q83
 #define FLASH_TOP 0x01FFFF              // 128K bytes
 #define FLASH_ADDRESS_TYPE uint24_t
@@ -131,7 +131,7 @@ extern "C" {
 // Note: datasheet incorrectly specifies address as 0x0F60
 #define ECAN_BUFFERS_BASE_ADDRESS 0x3F80    // Access Bank address (RXB0CON)
 #endif
-#if defined(CPU_FAMILY_PIC18_Q83)
+#if defined(CPU_FAMILY_PIC18_Q83Q84)
 #define INTERRUPTbits_GIEH INTCON0bits.GIEH
 #define INTERRUPTbits_GIEL INTCON0bits.GIEL
 #define CAN1_BUFFERS_BASE_ADDRESS 0x3800

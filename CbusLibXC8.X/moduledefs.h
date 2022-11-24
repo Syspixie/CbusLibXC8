@@ -141,7 +141,7 @@ extern "C" {
 #if defined(CPU_FAMILY_PIC18_K83)
 #define IVT_BASE_ADDRESS 0x000760   // 80 vectors; 0x000800 - (2 * 80)
 #endif
-#if defined(CPU_FAMILY_PIC18_Q83)
+#if defined(CPU_FAMILY_PIC18_Q83Q84)
 #define IVT_BASE_ADDRESS 0x0006E0   // 144 vectors; 0x000800 - (2 * 144)
 #endif
 

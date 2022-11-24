@@ -97,7 +97,7 @@
 #define NVM_WRITE_FLASH 0b10000100
 #define NVM_ERASE_FLASH 0b10010100
 #endif
-#if defined(CPU_FAMILY_PIC18_Q83)
+#if defined(CPU_FAMILY_PIC18_Q83Q84)
 #define CONFIG_UPPER_BYTE 0x30
 #define EEPROM_UPPER_BYTE 0x38
 #define NVM_READ_EEPROM 0b000
@@ -161,8 +161,15 @@ asm("ORG " ___mkstr(EEPROM_BOOT_FLAG - 7));
 __EEPROM_DATA(0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00);
 
 
+#if defined(ECAN_BUFFERS_BASE_ADDRESS)
 // ECAN_BUFFERS_BASE_ADDRESS is the address of RXB0, which is handy...
 volatile buff_t rxBuff __at(ECAN_BUFFERS_BASE_ADDRESS + 6);  // RXB0 D0-D7
+#endif
+#if defined(CAN1_BUFFERS_BASE_ADDRESS)
+// ToDo
+volatile buff_t rxBuff __at(CAN1_BUFFERS_BASE_ADDRESS);
+#endif
+
 buff_t buff;                        // Copy of RXB0 D0-D7
 uint8_t buffLen;                    // # bytes sent
 
@@ -200,7 +207,7 @@ static uint8_t readEeprom() {
     
     return NVMDAT;
 #endif
-#if defined(CPU_FAMILY_PIC18_Q83)
+#if defined(CPU_FAMILY_PIC18_Q83Q84)
     // Set up read
     NVMADRU = 0x38;
     NVMCON1bits.NVMCMD = NVM_READ_EEPROM;
@@ -256,7 +263,7 @@ static void writeMemory(uint8_t nvmOp) {
     // Wait for write to complete
     while (NVMCON1bits.WR);
 #endif
-#if defined(CPU_FAMILY_PIC18_Q83)
+#if defined(CPU_FAMILY_PIC18_Q83Q84)
     // Set up write
     NVMCON1bits.NVMCMD = nvmOp;
 
@@ -392,7 +399,7 @@ static void writeEeprom() {
     // Set the write address
     NVMADRL = buff.memAddr.valueL;
     NVMADRH = buff.memAddr.valueH;
-#if defined(CPU_FAMILY_PIC18_Q83)
+#if defined(CPU_FAMILY_PIC18_Q83Q84)
     NVMADRU = buff.memAddr.valueU;
 #endif
 
@@ -422,6 +429,7 @@ static void writeEeprom() {
  */
 static void sendResponse(canSend_t data) {
 
+#if defined(ECAN_BUFFERS_BASE_ADDRESS)
     // Wait for any previous transmission to complete
     while (TXB0CONbits.TXREQ);
 
@@ -431,6 +439,10 @@ static void sendResponse(canSend_t data) {
 
     // Start transmission
     TXB0CONbits.TXREQ = 1;
+#endif
+#if defined(CAN1_BUFFERS_BASE_ADDRESS)
+// ToDo
+#endif
 }
 
 
@@ -444,7 +456,7 @@ static void startApplication() {
     // Set up address of bootloader flag
     NVMADRL = EEPROM_BOOT_FLAG & 0xFF;
     NVMADRH = EEPROM_BOOT_FLAG >> 8;
-#if defined(CPU_FAMILY_PIC18_Q83)
+#if defined(CPU_FAMILY_PIC18_Q83Q84)
     NVMADRU = EEPROM_UPPER_BYTE;
 #endif
 
@@ -463,7 +475,7 @@ void main() __at(0x0020) {
     // Set up address of bootloader flag
     NVMADRL = EEPROM_BOOT_FLAG & 0xFF;
     NVMADRH = EEPROM_BOOT_FLAG >> 8;
-#if defined(CPU_FAMILY_PIC18_Q83)
+#if defined(CPU_FAMILY_PIC18_Q83Q84)
     NVMADRU = EEPROM_UPPER_BYTE;
 #endif
 
@@ -478,7 +490,7 @@ void main() __at(0x0020) {
     RB2PPS = 0x33;      //RB2->ECAN:CANTX0;    
     CANRXPPS = 0x0B;    //RB3->ECAN:CANRX;    
 #endif
-#if defined(CPU_FAMILY_PIC18_Q83)
+#if defined(CPU_FAMILY_PIC18_Q83Q84)
     // ToDo
 #endif
 
@@ -511,7 +523,7 @@ void main() __at(0x0020) {
     WPUC = 0b11111111;
     WPUE = 0b00000000;
 #endif
-#if defined(CPU_FAMILY_PIC18_Q83)
+#if defined(CPU_FAMILY_PIC18_Q83Q84)
     // ToDo
 #endif
 
@@ -519,6 +531,7 @@ void main() __at(0x0020) {
 
 //********* Initialise CAN bus interface
 
+#if defined(ECAN_BUFFERS_BASE_ADDRESS)
     CANCON = 0x80;
     while ((CANSTAT & 0xE0) != 0x80); // wait until ECAN is in config mode
 
@@ -527,9 +540,6 @@ void main() __at(0x0020) {
 #endif
 #if defined(CPU_FAMILY_PIC18_K83)
     CIOCON = 0b00000000;
-#endif
-#if defined(CPU_FAMILY_PIC18_Q83)
-    // ToDo
 #endif
 
     // Receive masks
@@ -556,6 +566,10 @@ void main() __at(0x0020) {
     TXB0EIDL = 0b00000100;
     TXB0SIDH = 0b10000000;
     TXB0SIDL = 0b00001000;
+#endif
+#if defined(CAN1_BUFFERS_BASE_ADDRESS)
+// ToDo
+#endif
 
 //********* Initialise local variables
 
@@ -570,6 +584,7 @@ void main() __at(0x0020) {
         // Get some data
         do {
             
+#if defined(ECAN_BUFFERS_BASE_ADDRESS)
             // Buffer ready to receive
             RXB0CONbits.RXFUL = 0;
 
@@ -578,11 +593,21 @@ void main() __at(0x0020) {
 
             // Data count
             buffLen = RXB0DLCbits.DLC;
+#endif
+#if defined(CAN1_BUFFERS_BASE_ADDRESS)
+// ToDo
+#endif
 
         } while (buffLen == 0);
 
+#if defined(ECAN_BUFFERS_BASE_ADDRESS)
         // Lowest bit of CAN ID determines whether PUT data or command sent
         if (RXB0EIDLbits.EID0) {
+#endif
+#if defined(CAN1_BUFFERS_BASE_ADDRESS)
+// ToDo
+        if (true) {
+#endif
 
             //********* Received PUT data
 
@@ -653,7 +678,11 @@ void main() __at(0x0020) {
 // <editor-fold defaultstate="expanded" desc="Interrupt service routines">
 
 
-#if defined(CPU_FAMILY_PIC18_K80)
+#if defined(IVT_BASE_ADDRESS)
+/**
+ * Relocation of the IVT (interrupt vector table) is left up to the application.
+ */
+#else
 /**
  * Relocation of the application's base address from 0x00000 to 0x000800 (making
  * room for the bootloader) means that its high and low priority interrupt
@@ -670,11 +699,6 @@ asm("GOTO " ___mkstr(APPLICATION_BASE_ADDRESS + 0x08));
 // Jump to relocated low priority interrupt location in the application
 asm("PSECT intcodelo");
 asm("GOTO " ___mkstr(APPLICATION_BASE_ADDRESS + 0x18));
-#endif
-#if defined(CPU_FAMILY_PIC18_K80)
-/**
- * Relocation of the IVT (interrupt vector table) is left up to the application.
- */
 #endif
 
 

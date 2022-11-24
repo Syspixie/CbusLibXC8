@@ -185,6 +185,6 @@
 
 #endif
 // *****************************************************************************
-#if defined(CPU_FAMILY_PIC18_Q83)
+#if defined(CPU_FAMILY_PIC18_Q83Q84)
 // ToDo
 #endif

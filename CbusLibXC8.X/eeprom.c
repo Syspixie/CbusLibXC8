@@ -104,7 +104,7 @@ static uint8_t readEE() {
     
     return NVMDAT;
 #endif
-#if defined(CPU_FAMILY_PIC18_Q83)
+#if defined(CPU_FAMILY_PIC18_Q83Q84)
     // Set up read
     NVMADRU = 0x38;
     NVMCON1bits.NVMCMD = 0b000;
@@ -167,7 +167,7 @@ static void writeEE(uint8_t data) {
     // Avoid accidental writes
     NVMCON1 = 0b00000000;
 #endif
-#if defined(CPU_FAMILY_PIC18_Q83)
+#if defined(CPU_FAMILY_PIC18_Q83Q84)
     NVMDATL = data;
 
     // Set up write
