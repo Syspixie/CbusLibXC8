@@ -109,6 +109,19 @@
 #define TX_TIMEOUT_MILLIS 1000          // 1 second
 
 
+typedef struct {
+    uint8_t id;     // CBUS CAN ID (used for receive only)
+    union {
+        struct {
+            unsigned DLC : 4;
+            unsigned reserved : 2;
+            unsigned RTR : 1;
+        } dlcBits;
+        uint8_t dlc;
+    };
+    uint8_t data[8];
+} canFrame_t;
+
 // ECANCON register EWIN<4:0> bits determine which RX/TX buffer is mapped into
 // the Access Bank address (ECAN_BUFFERS_BASE_ADDRESS)
 typedef enum {
@@ -158,14 +171,12 @@ volatile uint8_t rxFifoNewest = 0;
 volatile uint8_t rxFifoOldest = 0;
 
 // Transmit software FIFO
-volatile canFrame_t txFifo[TX_FIFO_LENGTH]; // Transmit FIFO
+volatile canFrame_t txFifo[TX_FIFO_LENGTH];
 volatile uint8_t txFifoNewest = 0;
 volatile uint8_t txFifoOldest = 0;
 
 // Transmit buffer start times for determining timeout
-uint16_t txb0StartedMillis;
-uint16_t txb1StartedMillis;
-uint16_t txb2StartedMillis;
+uint16_t txStartedMillis[3];
 
 
 /**
@@ -307,7 +318,7 @@ void ecanSendRtrRequest() {
     INTERRUPTbits_GIEL = 1;
 
     // Note time for timeout checking
-    txb1StartedMillis = getMillisShort();
+    txStartedMillis[1] = getMillisShort();
 }
 
 /**
@@ -327,7 +338,7 @@ void ecanSendRtrResponse() {
     INTERRUPTbits_GIEL = 1;
 
     // Note time for timeout checking
-    txb2StartedMillis = getMillisShort();
+    txStartedMillis[2] = getMillisShort();
 }
 
 /**
@@ -441,7 +452,7 @@ static void txb0NextIsr() {
 
     // Start transmit
     ewin.TXCONbits.TXREQ = 1;
-    txb0StartedMillis = millisTicks.words[0];
+    txStartedMillis[0] = millisTicks.words[0];
 }
 
 /**
@@ -476,35 +487,6 @@ static void rxNextIsr() {
 }
 
 /**
- * Checks for transmit buffer timeout.
- * 
- * @pre A TX buffer mapped to the Access Bank.
- */
-static void txCheckTimeoutIsr(uint16_t started) {
-
-    uint16_t tSince = millisTicks.words[0] - started;
-
-    // If transmit has been running at low priority (as determined by the top
-    // CAN ID bits) for some time, abort it, change to high priority, then
-    // restart it.
-    if ((ewin.SIDH & 0b11000000) && tSince >= TX_PRIORITY_HIKE_MILLIS) {
-        ewin.TXCONbits.TXREQ = 0; // Abort
-        ewin.SIDH &= ~0b11000000; // Set highest priority
-        ewin.TXCONbits.TXREQ = 1; // Retry
-#ifdef INCLUDE_CBUS_CAN_STATS
-        ++stats.txPrioHike;
-#endif
-
-        // If transmit has been running for too long, abort it.
-    } else if (tSince >= TX_TIMEOUT_MILLIS) {
-        ewin.TXCONbits.TXREQ = 0; // Abort
-#ifdef INCLUDE_CBUS_CAN_STATS
-        ++stats.txTmoErr;
-#endif
-    }
-}
-
-/**
  * Called on ECAN receive message interrupt.
  */
 #if defined(IVT_BASE_ADDRESS)
@@ -513,9 +495,15 @@ void __interrupt(irq(RXB1IF), base(IVT_BASE_ADDRESS), low_priority) ECAN_RXBnI_I
 void ECAN_RXBnI_ISR(void) {
 #endif
 
-    // Loop for all used RX FIFO buffers, and room in the software FIFO
+    // Loop for all used RX FIFO buffers, when room in the software FIFO
     while (COMSTATbits.NOT_FIFOEMPTY && RX_FIFO_CUR_LENGTH < RX_FIFO_LENGTH) {
         ECANCONbits.EWIN = ewinRxFifo | (CANCON & 0x07);
+
+        // Skip any extended ID messages that escaped the RX filter
+        if (ewin.SIDL & 0b00001000) {
+            ewin.RXCONbits.RXFUL = 0;
+            continue;
+        }
 
         // Get the received data
         rxNextIsr();
@@ -639,6 +627,35 @@ void ecanIsr() {
 #endif
 
 /**
+ * Checks for transmit buffer timeout.
+ * 
+ * @pre A TX buffer mapped to the Access Bank.
+ */
+static void txCheckTimeoutIsr(uint16_t started) {
+
+    uint16_t tSince = millisTicks.words[0] - started;
+
+    // If transmit has been running at low priority (as determined by the top
+    // CAN ID bits) for some time, abort it, change to high priority, then
+    // restart it.
+    if ((ewin.SIDH & 0b11000000) && tSince >= TX_PRIORITY_HIKE_MILLIS) {
+        ewin.TXCONbits.TXREQ = 0; // Abort
+        ewin.SIDH &= ~0b11000000; // Set highest priority
+        ewin.TXCONbits.TXREQ = 1; // Retry
+#ifdef INCLUDE_CBUS_CAN_STATS
+        ++stats.txPrioHike;
+#endif
+
+        // If transmit has been running for too long, abort it.
+    } else if (tSince >= TX_TIMEOUT_MILLIS) {
+        ewin.TXCONbits.TXREQ = 0; // Abort
+#ifdef INCLUDE_CBUS_CAN_STATS
+        ++stats.txTmoErr;
+#endif
+    }
+}
+
+/**
  * Performs regular ECAN operations (called every millisecond).
  */
 void ecanTimerIsr() {
@@ -648,7 +665,7 @@ void ecanTimerIsr() {
         ECANCONbits.EWIN = ewinTX + i;
 
         // Check for timeout
-        if (ewin.TXCONbits.TXREQ) txCheckTimeoutIsr(txb0StartedMillis);
+        if (ewin.TXCONbits.TXREQ) txCheckTimeoutIsr(txStartedMillis[i]);
 
         // If TXB0 is idle, and FIFO not empty, start the next transmit
         if (i == 0 && !ewin.TXCONbits.TXREQ && TX_FIFO_CUR_LENGTH > 0) txb0NextIsr();
