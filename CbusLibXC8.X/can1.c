@@ -266,8 +266,8 @@ static void CAN1_RX_FIFO_Configuration(void) {
     // FRESET enabled; TXREQ disabled; UINC disabled; 
     C1FIFOCON1H = 0x04;
 
-    // TXAT Unlimited number of retransmission attempts; TXPRI 1; 
-    C1FIFOCON1U = 0x60;
+    // TXAT Three retransmission attempts; TXPRI 1; 
+    C1FIFOCON1U = 0x20;
 
     // PLSIZE 8; FSIZE 12; 
     C1FIFOCON1T = 0x0B;
@@ -280,17 +280,16 @@ static void CAN1_RX_FIFO_Configuration(void) {
 
 static void CAN1_RX_FIFO_FilterMaskConfiguration(void) {
 
-    // FLTEN0 enabled; F0BP FIFO 1; 
     C1FLTOBJ0L = 0x00;
     C1FLTOBJ0H = 0x00;
     C1FLTOBJ0U = 0x00;
-    C1FLTOBJ0T = 0x00;
-    C1MASK0L = 0xFC;
-    C1MASK0H = 0x07;
+    C1FLTOBJ0T = 0x00;  // EXIDE clear: allow standard ID only
+    C1MASK0L = 0x00;
+    C1MASK0H = 0x00;
     C1MASK0U = 0x00;
-    C1MASK0T = 0x40;
+    C1MASK0T = 0x40;    // MIDE set: filter on EXIDE
+    // FLTEN0 enabled; F0BP FIFO 1; 
     C1FLTCON0L = 0x81;
-
 }
 
 static void CAN1_TX_FIFO_Configuration(void) {
@@ -385,7 +384,7 @@ static void CAN1_Initialize(void) {
     if (CAN_OP_MODE_REQUEST_SUCCESS == CAN1_OperationModeSet(CAN_CONFIGURATION_MODE)) {
 
         /* Initialize the C1FIFOBA with the start address of the CAN FIFO message object area. */
-        C1FIFOBA = 0x3800;
+        C1FIFOBA = CAN1_BUFFERS_BASE_ADDRESS;
 
         // CLKSEL0 disabled; PXEDIS enabled; ISOCRCEN enabled; DNCNT 0; 
         C1CONL = 0x60;
@@ -768,26 +767,54 @@ void initCan1() {
 /**
  * Sends an RTR request.
  * 
- * @pre encodedCanBusID populated
+ * @pre fullCanBusID populated
  */
 void can1SendRtrRequest() {
+
+    CAN_MSG_OBJ msg;
+    msg.msgId = fullCanBusID;
+    msg.field.formatType = CAN_2_0_FORMAT;
+    msg.field.brs = CAN_NON_BRS_MODE;
+    msg.field.frameType = CAN_FRAME_RTR;
+    msg.field.idType = CAN_FRAME_STD;
+    msg.field.dlc = DLC_0;
+    CAN1_Transmit(0, &msg);
 }
 
 /**
  * Sends an RTR response.
  * 
- * @pre encodedCanBusID populated
+ * @pre fullCanBusID populated
  */
 void can1SendRtrResponse() {
+
+    CAN_MSG_OBJ msg;
+    msg.msgId = fullCanBusID;
+    msg.field.formatType = CAN_2_0_FORMAT;
+    msg.field.brs = CAN_NON_BRS_MODE;
+    msg.field.frameType = CAN_FRAME_DATA;
+    msg.field.idType = CAN_FRAME_STD;
+    msg.field.dlc = DLC_0;
+    CAN1_Transmit(0, &msg);
 }
 
 /**
  * Sends a CBUS message.
  * 
- * @pre encodedCanBusID populated
+ * @pre fullCanBusID populated
  * @pre message in cbusMsg[]
  */
 void can1Transmit() {
+
+    CAN_MSG_OBJ msg;
+    msg.msgId = fullCanBusID;
+    msg.field.formatType = CAN_2_0_FORMAT;
+    msg.field.brs = CAN_NON_BRS_MODE;
+    msg.field.frameType = CAN_FRAME_DATA;
+    msg.field.idType = CAN_FRAME_STD;
+    msg.field.dlc = (cbusMsg[0] >> 5) + 1;
+    msg.data = cbusMsg;
+    CAN1_Transmit(0, &msg);
 }
 
 /**
@@ -799,7 +826,25 @@ void can1Transmit() {
  */
 int8_t can1Receive(bool(* msgCheckFunc)(uint8_t id, uint8_t dataLen, volatile uint8_t* data)) {
 
-    return 0;
+    // If no messages, we're done
+    if (CAN1_ReceivedMessageCountGet() == 0) return -1;
+
+    // Get message; done if error
+    CAN_MSG_OBJ msg;
+    if (!CAN1_Receive(&msg)) return -1;
+
+    // Check for things we can't handle (should never happen if hardware config OK)
+    if (msg.field.formatType != CAN_2_0_FORMAT
+            | msg.field.brs != CAN_NON_BRS_MODE
+            | msg.field.idType != CAN_FRAME_STD) return -1;
+
+    // Check for CBUS message
+    uint8_t id = (uint8_t) msg.msgId & 0x01111111;
+    uint8_t dataLen = msg.field.dlc;
+    volatile uint8_t* data = (msg.field.frameType == CAN_FRAME_RTR) ? NULL : msg.data;
+    bool haveMsg = msgCheckFunc(id, dataLen, data);
+
+    return haveMsg ? 1 : 0;
 }
 
 
@@ -809,7 +854,6 @@ int8_t can1Receive(bool(* msgCheckFunc)(uint8_t id, uint8_t dataLen, volatile ui
  * Performs regular CAN1 operations (called every millisecond).
  */
 void can1TimerIsr() {
-
 }
 
 

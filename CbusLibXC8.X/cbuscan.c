@@ -108,7 +108,8 @@ typedef enum {
 
 // extern
 uint8_t canBusID; // CBUS 7-bit CAN ID
-bytes16_t encodedCanBusID; // CBUS CAN ID + priority bits encoded as standard CAN ID in SIDL/SIDH pair
+uint16_t fullCanBusID; // CBUS CAN ID + priority bits
+bytes16_t encodedCanBusID; // Full CBUS CAN ID encoded as standard CAN ID in SIDL/SIDH pair
 uint8_t cbusMsg[8]; // CBUS message (8 bytes)
 
 enum_t selfEnumStatus = selfEnumIsInactive; // Self-enumeration state
@@ -125,7 +126,8 @@ void initCbusCan() {
     initCan();
 
     // Encode the initial CanBusID
-    encodedCanBusID.value = (uint16_t) (CAN_BUS_ID_UPPER_BITS | canBusID) << 5;
+    fullCanBusID = CAN_BUS_ID_UPPER_BITS | canBusID;
+    encodedCanBusID.value = fullCanBusID << 5;
 }
 
 /**
@@ -355,7 +357,8 @@ bool setCbusCanID(uint8_t newCanID, bool check) {
 
     // Set and encode the new CAD ID
     canBusID = newCanID;
-    encodedCanBusID.value = (uint16_t) (CAN_BUS_ID_UPPER_BITS | canBusID) << 5;
+    fullCanBusID = CAN_BUS_ID_UPPER_BITS | canBusID;
+    encodedCanBusID.value = fullCanBusID << 5;
 
     // Don't forget it
     writeEeprom8(EEPROM_CAN_ID, canBusID);

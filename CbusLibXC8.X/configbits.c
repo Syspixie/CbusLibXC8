@@ -278,6 +278,18 @@
 // CONFIG19
 #pragma config BCRCSEEDL = hFF  // Boot Sector Seed for CRC on boot bits 7-0->Bits 7:0 of BCRCSEED are 0xFF
 
+// CONFIG20
+#pragma config BCRCEREST = hFF  // Boot Sector Expected Value for CRC on boot bits 31-24->Bits 31:24 of BCRCERES are 0xFF
+
+// CONFIG21
+#pragma config BCRCERESU = hFF  // Boot Sector Expected Value for CRC on boot bits 23-16->Bits 23:16 of BCRCERES are 0xFF
+
+// CONFIG22
+#pragma config BCRCERESH = hFF  // Boot Sector Expected Value for CRC on boot bits 15-8->Bits 15:8 of BCRCERES are 0xFF
+
+// CONFIG23
+#pragma config BCRCERESL = hFF  // Boot Sector Expected Value for CRC on boot bits 7-0->Bits 7:0 of BCRCERES are 0xFF
+
 // CONFIG24
 #pragma config CRCPOLT = hFF    // Non-Boot Sector Polynomial for CRC on boot bits 31-24->Bits 31:24 of CRCPOL are 0xFF
 
@@ -301,5 +313,17 @@
 
 // CONFIG31
 #pragma config CRCSEEDL = hFF   // Non-Boot Sector Seed for CRC on boot bits 7-0->Bits 7:0 of CRCSEED are 0xFF
+
+// CONFIG32
+#pragma config CRCEREST = hFF  // Non-Boot Sector Expected Value for CRC on boot bits 31-24->Bits 31:24 of CRCERES are 0xFF
+
+// CONFIG33
+#pragma config CRCERESU = hFF  // Non-Boot Sector Expected Value for CRC on boot bits 23-16->Bits 23:16 of CRCERES are 0xFF
+
+// CONFIG34
+#pragma config CRCERESH = hFF  // Non-Boot Sector Expected Value for CRC on boot bits 15-8->Bits 15:8 of CRCERES are 0xFF
+
+// CONFIG35
+#pragma config CRCERESL = hFF  // Non-Boot Sector Expected Value for CRC on boot bits 7-0->Bits 7:0 of CRCERES are 0xFF
 
 #endif
