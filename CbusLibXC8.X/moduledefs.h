@@ -136,15 +136,6 @@ extern "C" {
 // Finally eventTable, on a block boundary
 #define EVENTS_FLASH_ADDRESS ((NODE_VAR_ADDRESS - (MAX_NUM_EVENTS * EVENT_SIZE)) & ~(FLASH_BLOCK_SIZE - 1))
 
-// Interrupt vector table, at the top of bootloader region
-// Note: can't use calculation to derive address: __interrupt can't handle it!
-#if defined(CPU_FAMILY_PIC18_K83)
-#define IVT_BASE_ADDRESS 0x000760   // 80 vectors; 0x000800 - (2 * 80)
-#endif
-#if defined(CPU_FAMILY_PIC18_Q83Q84)
-#define IVT_BASE_ADDRESS 0x0006E0   // 144 vectors; 0x000800 - (2 * 144)
-#endif
-
 
 #ifdef	__cplusplus
 }

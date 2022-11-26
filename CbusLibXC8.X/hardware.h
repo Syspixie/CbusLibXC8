@@ -128,12 +128,14 @@ extern "C" {
 #if defined(CPU_FAMILY_PIC18_K83)
 #define INTERRUPTbits_GIEH INTCON0bits.GIEH
 #define INTERRUPTbits_GIEL INTCON0bits.GIEL
+#define IVT_BASE_ADDRESS 0x000760           // 80 vectors; 0x000800 - (2 * 80)
 // Note: datasheet incorrectly specifies address as 0x0F60
 #define ECAN_BUFFERS_BASE_ADDRESS 0x3F80    // Access Bank address (RXB0CON)
 #endif
 #if defined(CPU_FAMILY_PIC18_Q83Q84)
 #define INTERRUPTbits_GIEH INTCON0bits.GIEH
 #define INTERRUPTbits_GIEL INTCON0bits.GIEL
+#define IVT_BASE_ADDRESS 0x0006E0           // 144 vectors; 0x000800 - (2 * 144)
 #define CAN1_BUFFERS_BASE_ADDRESS 0x3800
 #endif
 
