@@ -237,6 +237,7 @@ struct CAN1_RX_FIFO {
     volatile uint8_t fifoHead;
 };
 
+
 //CAN RX FIFO Message object data field 
 static volatile uint8_t rxMsgData[RX_FIFO_MSG_DATA];
 
@@ -247,6 +248,8 @@ static struct CAN1_RX_FIFO rxFifos[] ={
 static volatile struct CAN_FIFOREG * const FIFO = (struct CAN_FIFOREG *) &C1TXQCONL;
 static const uint8_t DLC_BYTES[] = {0U, 1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U};
 
+// Current standard ID
+uint16_t curStdID;
 
 
 static void CAN1_RX_FIFO_ResetInfo(void) {
@@ -765,14 +768,22 @@ void initCan1() {
 }
 
 /**
- * Sends an RTR request.
+ * Sets the current CAN BUS ID
  * 
- * @pre fullCanBusID populated
+ * @param id CBUS CAN ID + priority bits
+ */
+void can1SetID(uint16_t stdID) {
+
+    curStdID = stdID;
+}
+
+/**
+ * Sends an RTR request.
  */
 void can1SendRtrRequest() {
 
     CAN_MSG_OBJ msg;
-    msg.msgId = fullCanBusID;
+    msg.msgId = curStdID;
     msg.field.formatType = CAN_2_0_FORMAT;
     msg.field.brs = CAN_NON_BRS_MODE;
     msg.field.frameType = CAN_FRAME_RTR;
@@ -783,13 +794,11 @@ void can1SendRtrRequest() {
 
 /**
  * Sends an RTR response.
- * 
- * @pre fullCanBusID populated
  */
 void can1SendRtrResponse() {
 
     CAN_MSG_OBJ msg;
-    msg.msgId = fullCanBusID;
+    msg.msgId = curStdID;
     msg.field.formatType = CAN_2_0_FORMAT;
     msg.field.brs = CAN_NON_BRS_MODE;
     msg.field.frameType = CAN_FRAME_DATA;
@@ -801,13 +810,12 @@ void can1SendRtrResponse() {
 /**
  * Sends a CBUS message.
  * 
- * @pre fullCanBusID populated
  * @pre message in cbusMsg[]
  */
 void can1Transmit() {
 
     CAN_MSG_OBJ msg;
-    msg.msgId = fullCanBusID;
+    msg.msgId = curStdID;
     msg.field.formatType = CAN_2_0_FORMAT;
     msg.field.brs = CAN_NON_BRS_MODE;
     msg.field.frameType = CAN_FRAME_DATA;
@@ -824,7 +832,7 @@ void can1Transmit() {
  * @return -1: no message; 0: not a CBUS message; 1: is a CBUS message
  * @post cbusMsg[] CBUS message
  */
-int8_t can1Receive(bool(* msgCheckFunc)(uint8_t id, uint8_t dataLen, volatile uint8_t* data)) {
+int8_t can1Receive(bool(* msgCheckFunc)(uint16_t stdID, uint8_t dataLen, volatile uint8_t* data)) {
 
     // If no messages, we're done
     if (CAN1_ReceivedMessageCountGet() == 0) return -1;
@@ -839,10 +847,8 @@ int8_t can1Receive(bool(* msgCheckFunc)(uint8_t id, uint8_t dataLen, volatile ui
             | msg.field.idType != CAN_FRAME_STD) return -1;
 
     // Check for CBUS message
-    uint8_t id = (uint8_t) msg.msgId & 0x01111111;
-    uint8_t dataLen = msg.field.dlc;
     volatile uint8_t* data = (msg.field.frameType == CAN_FRAME_RTR) ? NULL : msg.data;
-    bool haveMsg = msgCheckFunc(id, dataLen, data);
+    bool haveMsg = msgCheckFunc((uint16_t) msg.msgId, msg.field.dlc, data);
 
     return haveMsg ? 1 : 0;
 }
