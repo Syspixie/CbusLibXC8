@@ -120,7 +120,16 @@ void initMillis() {
     TMR0H = 0xF9;
 #endif
 #if defined(CPU_FAMILY_PIC18_Q83Q84)
-    // ToDo
+    IPR3bits.TMR0IP = 0;
+    PIR3bits.TMR0IF = 0;
+    PIE3bits.TMR0IE = 1;
+    
+    T0CON0 = 0x80;  // T0OUTPS 1:1; T0EN enabled; T016BIT 8-bit; 
+    T0CON1 = 0x46;  // T0CS FOSC/4; T0CKPS 1:64; T0ASYNC synchronised; 
+
+    // Count 0..249
+    TMR0L = 0x00;
+    TMR0H = 0xF9;
 #endif
 }
 
@@ -208,7 +217,7 @@ void TMR0_ISR() {
     PIR3bits.TMR0IF = 0;
 #endif
 #if defined(CPU_FAMILY_PIC18_Q83Q84)
-    // ToDo
+    PIR3bits.TMR0IF = 0;
 #endif
 
     // Call application 'tick' ISRs.

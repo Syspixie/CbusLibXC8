@@ -86,7 +86,7 @@ void __section("mainSec") main() {
     INTCON0bits.IPEN = 1;           // Enable high/low interrupt priorities
 #endif
 #if defined(CPU_FAMILY_PIC18_Q83Q84)
-    // ToDo
+    INTCON0bits.IPEN = 1;           // Enable high/low interrupt priorities
 #endif
 
 #if defined(IVT_BASE_ADDRESS)

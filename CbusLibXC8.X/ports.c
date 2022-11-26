@@ -77,7 +77,8 @@ void initPorts() {
     CANRXPPS = 0x0B;    //RB3->ECAN:CANRX;    
 #endif
 #if defined(CPU_FAMILY_PIC18_Q83Q84)
-    // ToDo
+    RB2PPS = 0x46;      //RB2->CAN1:CANTX;
+    CANRXPPS = 0x0B;    //RB3->CAN1:CANRX;
 #endif
 
     LATA = 0x00;
@@ -110,6 +111,18 @@ void initPorts() {
     WPUE = 0b00000000;
 #endif
 #if defined(CPU_FAMILY_PIC18_Q83Q84)
-    // ToDo
+    TRISA = 0b11111111;     // A7:OSC1 A6:OSC2 A2:BtnProg
+    TRISB = 0b00111011;     // B7:LedSlim B6:LedFlim B3:CANRX B2:CANTX0
+    TRISC = 0b11111111;
+    TRISE = 0b00001000;
+
+    ANSELA = 0x00;
+    ANSELB = 0x00;
+    ANSELC = 0x00;
+
+    WPUA = 0b00111011;      // A7:OSC1 A6:OSC2 A2:BtnProg
+    WPUB = 0b00110011;      // B7:LedSlim B6:LedFlim B3:CANRX B2:CANTX
+    WPUC = 0b11111111;
+    WPUE = 0b00000000;
 #endif
 }
