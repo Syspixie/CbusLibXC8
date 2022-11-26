@@ -110,7 +110,7 @@
 
 
 typedef struct {
-    uint8_t id;     // CBUS CAN ID (used for receive only)
+    uint16_t stdID;    // Standard ID (used for receive only)
     union {
         struct {
             unsigned DLC : 4;
@@ -177,6 +177,9 @@ volatile uint8_t txFifoOldest = 0;
 
 // Transmit buffer start times for determining timeout
 uint16_t txStartedMillis[3];
+
+// Current standard ID encoded as SIDL/SIDH pair
+bytes16_t encodedCurStdID;
 
 
 /**
@@ -301,9 +304,17 @@ void initEcan() {
 }
 
 /**
- * Sends an RTR request.
+ * Sets the current CAN BUS ID
  * 
- * @pre encodedCanBusID populated
+ * @param id CBUS CAN ID + priority bits
+ */
+void ecanSetID(uint16_t stdID) {
+
+    encodedCurStdID.value = stdID << 5;
+}
+
+/**
+ * Sends an RTR request.
  */
 void ecanSendRtrRequest() {
 
@@ -311,8 +322,8 @@ void ecanSendRtrRequest() {
     // active nodes.
     INTERRUPTbits_GIEL = 0;
     ECANCONbits.EWIN = ewinTXB1;
-    ewin.SIDH = encodedCanBusID.valueH;
-    ewin.SIDL = encodedCanBusID.valueL;
+    ewin.SIDH = encodedCurStdID.valueH;
+    ewin.SIDL = encodedCurStdID.valueL;
     ewin.DLC = 0b01000000;
     ewin.TXCONbits.TXREQ = 1;
     INTERRUPTbits_GIEL = 1;
@@ -323,16 +334,14 @@ void ecanSendRtrRequest() {
 
 /**
  * Sends an RTR response.
- * 
- * @pre encodedCanBusID populated
  */
 void ecanSendRtrResponse() {
 
     // Send response which includes our CAN ID
     INTERRUPTbits_GIEL = 0;
     ECANCONbits.EWIN = ewinTXB2;
-    ewin.SIDH = encodedCanBusID.valueH;
-    ewin.SIDL = encodedCanBusID.valueL;
+    ewin.SIDH = encodedCurStdID.valueH;
+    ewin.SIDL = encodedCurStdID.valueL;
     ewin.DLC = 0;
     ewin.TXCONbits.TXREQ = 1;
     INTERRUPTbits_GIEL = 1;
@@ -344,7 +353,6 @@ void ecanSendRtrResponse() {
 /**
  * Sends a CBUS message.
  * 
- * @pre encodedCanBusID populated
  * @pre message in cbusMsg[]
  */
 void ecanTransmit() {
@@ -382,7 +390,7 @@ void ecanTransmit() {
  * @return -1: no message; 0: not a CBUS message; 1: is a CBUS message
  * @post cbusMsg[] CBUS message
  */
-int8_t ecanReceive(bool (* msgCheckFunc)(uint8_t id, uint8_t dataLen, volatile uint8_t* data)) {
+int8_t ecanReceive(bool (* msgCheckFunc)(uint16_t stdID, uint8_t dataLen, volatile uint8_t* data)) {
 
     // If no messages, we're done
     if (RX_FIFO_CUR_LENGTH == 0) return -1;
@@ -392,7 +400,7 @@ int8_t ecanReceive(bool (* msgCheckFunc)(uint8_t id, uint8_t dataLen, volatile u
 
     // Check for CBUS message
     volatile uint8_t* data = (rxFifo[idx].dlcBits.RTR) ? NULL : rxFifo[idx].data;
-    bool haveMsg = msgCheckFunc(rxFifo[idx].id, rxFifo[idx].dlcBits.DLC, data);
+    bool haveMsg = msgCheckFunc(rxFifo[idx].stdID, rxFifo[idx].dlcBits.DLC, data);
 
     // Update FIFO
     ++rxFifoOldest;
@@ -437,8 +445,8 @@ static void txb0NextIsr() {
     uint8_t idx = txFifoOldest % TX_FIFO_LENGTH;
 
     // Copy encoded CAN ID into buffer
-    ewin.SIDH = encodedCanBusID.valueH;
-    ewin.SIDL = encodedCanBusID.valueL;
+    ewin.SIDH = encodedCurStdID.valueH;
+    ewin.SIDL = encodedCurStdID.valueL;
 
     // Copy data into buffer
     ewin.DLC = txFifo[idx].dlc;
@@ -465,11 +473,11 @@ static void rxNextIsr() {
     // FIFO index
     uint8_t idx = rxFifoNewest % RX_FIFO_LENGTH;
 
-    // Decode standard CAN ID from buffer
+    // Decode standard ID from buffer
     bytes16_t v;
     v.valueL = ewin.SIDL;
     v.valueH = ewin.SIDH;
-    rxFifo[idx].id = (v.value >> 5) & 0b01111111;
+    rxFifo[idx].stdID = (v.value >> 5);
 
     // Copy data from buffer
     rxFifo[idx].dlc = ewin.DLC;

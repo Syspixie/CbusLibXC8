@@ -76,10 +76,11 @@ extern "C" {
 
 
     void initEcan(void);
+    void ecanSetID(uint16_t stdID);
     void ecanSendRtrRequest(void);
     void ecanSendRtrResponse(void);
     void ecanTransmit(void);
-    int8_t ecanReceive(bool (* msgCheckFunc)(uint8_t id, uint8_t dlc, volatile uint8_t* data));
+    int8_t ecanReceive(bool (* msgCheckFunc)(uint16_t stdID, uint8_t dataLen, volatile uint8_t* data));
 #if defined(CPU_FAMILY_PIC18_K80)
     void ecanIsr(void);
 #endif
