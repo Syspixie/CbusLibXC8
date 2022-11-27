@@ -170,10 +170,9 @@ static void eraseCache() {
 
     while (stallMemoryWrite());
 
-    TBLPTR = cachedBlock;
-
 #if defined(CPU_FAMILY_PIC18_K80)
     // Set up erase
+    TBLPTR = cachedBlock;
     EECON1 = 0b10010100;
 
     // Perform erase with all interrupts temporarily disabled
@@ -188,6 +187,7 @@ static void eraseCache() {
 #endif
 #if defined(CPU_FAMILY_PIC18_K83)
     // Set up erase
+    TBLPTR = cachedBlock;
     NVMCON1 = 0b10010100;
 
     // Perform erase with all interrupts temporarily disabled
@@ -202,6 +202,7 @@ static void eraseCache() {
 #endif
 #if defined(CPU_FAMILY_PIC18_Q83Q84)
     // Set up erase
+    NVMADR = cachedBlock;
     NVMCON1bits.NVMCMD = 0b110;
 
     // Perform erase with all interrupts temporarily disabled
@@ -257,6 +258,7 @@ static void flushCache() {
 
 #if defined(CPU_FAMILY_PIC18_K80)
     // Set up write
+    TBLPTR = cachedBlock;
     EECON1 = 0b10000100;
 
     // Perform write with all interrupts temporarily disabled
@@ -271,6 +273,7 @@ static void flushCache() {
 #endif
 #if defined(CPU_FAMILY_PIC18_K83)
     // Set up write
+    TBLPTR = cachedBlock;
     NVMCON1 = 0b10000100;
 
     // Perform write with all interrupts temporarily disabled
@@ -285,6 +288,7 @@ static void flushCache() {
 #endif
 #if defined(CPU_FAMILY_PIC18_Q83Q84)
     // Set up write
+    NVMADR = cachedBlock;
     NVMCON1bits.NVMCMD = 0b101;
 
     // Perform write with all interrupts temporarily disabled
