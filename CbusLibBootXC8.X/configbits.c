@@ -189,7 +189,7 @@
 
 // CONFIG1
 #pragma config FEXTOSC = HS     // External Oscillator Selection->HS (crystal oscillator) above 8 MHz
-#pragma config RSTOSC = EXTOSC  // Reset Oscillator Selection->EXTOSC operating per FEXTOSC bits (device manufacturing default)
+#pragma config RSTOSC = EXTOSC_4PLL // Reset Oscillator Selection->EXTOSC with 4x PLL, with EXTOSC operating per FEXTOSC bits
 
 // CONFIG2
 #pragma config CLKOUTEN = OFF   // Clock out Enable bit->CLKOUT function is disabled

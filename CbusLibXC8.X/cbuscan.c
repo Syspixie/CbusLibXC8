@@ -232,6 +232,20 @@ static void queueTransmit(int8_t tx) {
  */
 static bool preProcessMessage(uint16_t stdID, uint8_t dataLen, volatile uint8_t* data) {
 
+    // Clear upper (priority) bits from CAN ID
+    uint8_t id = stdID & CAN_BUS_ID_UPPER_BITS_MASK;
+
+    // If received CAN ID is the same as ours...
+    if (canBusID > 0 && id == canBusID && selfEnumStatus == selfEnumIsInactive) {
+
+        // Start self-enumeration after a delay
+        selfEnumStatus = selfEnumIsPending;
+        selfEnumStartedMillis = getMillisShort();
+
+        // Ignore, even if a CBUS message
+        return false;
+    }
+
     // If RTR...
     if (!data) {
 
@@ -251,9 +265,6 @@ static bool preProcessMessage(uint16_t stdID, uint8_t dataLen, volatile uint8_t*
         return false;
     }
 
-    // Clear upper (priority) bits from CAN ID
-    uint8_t id = stdID & CAN_BUS_ID_UPPER_BITS_MASK;
-
     // If zero data, must be response to our RTR...
     if (dataLen == 0) {
 
@@ -264,19 +275,9 @@ static bool preProcessMessage(uint16_t stdID, uint8_t dataLen, volatile uint8_t*
         return false;
     }
 
-    // If received CAN ID is the same as ours...
-    if (id == canBusID && selfEnumStatus == selfEnumIsInactive) {
-
-        // Start self-enumeration after a delay
-        selfEnumStatus = selfEnumIsPending;
-        selfEnumStartedMillis = getMillisShort();
-
-        // Ignore, even if a CBUS message
-        return false;
-    }
-
     // We have a CBUS message; copy data
     utilMemcpy(cbusMsg, data, dataLen);
+
     return true;
 }
 
@@ -357,7 +358,7 @@ bool setCbusCanID(uint8_t newCanID, bool check) {
                 || canBusID > CBUSCAN_MAX_DYNAMIC_CANID) return false;
     }
 
-    // Use the new CAD ID
+    // Use the new CAN ID
     canBusID = newCanID;
     canSetID(CAN_BUS_ID_UPPER_BITS | canBusID);
 

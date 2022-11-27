@@ -101,35 +101,35 @@ void initMillis() {
     INTCONbits.TMR0IF = 0;
     INTCONbits.TMR0IE = 1;
 
-    T0CON = 0xC5;   // T0PS 1:64; T08BIT 8-bit; T0SE Increment_lo_hi; T0CS FOSC/4; TMR0ON enabled; PSA assigned; 
-
     // Count 6..256
     TMR0L = 0x06;
     TMR0H = 0x00;
+
+    T0CON = 0xC5;   // T0PS 1:64; T08BIT 8-bit; T0SE Increment_lo_hi; T0CS FOSC/4; TMR0ON enabled; PSA assigned; 
 #endif
 #if defined(CPU_FAMILY_PIC18_K83)
     IPR3bits.TMR0IP = 0;
     PIR3bits.TMR0IF = 0;
     PIE3bits.TMR0IE = 1;
-    
-    T0CON0 = 0x80;  // T0OUTPS 1:1; T0EN enabled; T016BIT 8-bit; 
-    T0CON1 = 0x46;  // T0CS FOSC/4; T0CKPS 1:64; T0ASYNC synchronised; 
 
     // Count 0..249
     TMR0L = 0x00;
     TMR0H = 0xF9;
+    
+    T0CON1 = 0x46;  // T0CS FOSC/4; T0CKPS 1:64; T0ASYNC synchronised; 
+    T0CON0 = 0x80;  // T0OUTPS 1:1; T0EN enabled; T016BIT 8-bit; 
 #endif
 #if defined(CPU_FAMILY_PIC18_Q83Q84)
     IPR3bits.TMR0IP = 0;
     PIR3bits.TMR0IF = 0;
     PIE3bits.TMR0IE = 1;
-    
-    T0CON0 = 0x80;  // T0OUTPS 1:1; T0EN enabled; T016BIT 8-bit; 
-    T0CON1 = 0x46;  // T0CS FOSC/4; T0CKPS 1:64; T0ASYNC synchronised; 
 
     // Count 0..249
     TMR0L = 0x00;
     TMR0H = 0xF9;
+    
+    T0CON1 = 0x46;  // T0CS FOSC/4; T0CKPS 1:64; T0ASYNC synchronised; 
+    T0CON0 = 0x80;  // T0OUTPS 1:1; T0EN enabled; T016BIT 8-bit; 
 #endif
 }
 
