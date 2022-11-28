@@ -82,9 +82,9 @@ typedef union {
 } cacheStatus_t;
 
 
-uint8_t cacheData[FLASH_BLOCK_SIZE];        // Cache
-flashAddr_t cachedBlock;                    // Currently cached memory block (on FLASH_BLOCK_SIZE boundary)
-flashBlock_t cacheOffset;                   // Current byte offset within cachedBlock
+uint8_t pageBuffer[FLASH_PAGE_SIZE];       // Cache
+flashAddr_t currentPage;                    // Currently cached memory page (on FLASH_PAGE_SIZE boundary)
+flashPageOffset_t pageOffset;                    // Current byte offset within currentPage
 cacheStatus_t cacheStatus;                  // Cache status flags
 
 
@@ -157,97 +157,42 @@ void readFlash(flashAddr_t addr, void* dst, size_t n) {
 
 
 /**
- * Erases the current FLASH block.
+ * Reads the current FLASH page into the page buffer.
  * 
- * Uses stallMemoryWrite callback as all code execution (including interrupts)
- * is stopped until the erase is complete (typically 2ms).
- * 
- * @pre cachedBlock set.
- * @pre cacheStatus set.
- * @post cacheStatus updated.
+ * @pre currentPage set.
  */
-static void eraseCache() {
+static void readPage() {
 
-    while (stallMemoryWrite());
+    TBLPTR = currentPage;
 
-#if defined(CPU_FAMILY_PIC18_K80)
-    // Set up erase
-    TBLPTR = cachedBlock;
-    EECON1 = 0b10010100;
+    uint8_t* p = pageBuffer;
+    flashPageOffset_t n = FLASH_PAGE_SIZE;
 
-    // Perform erase with all interrupts temporarily disabled
-    INTERRUPTbits_GIEH = 0;
-    EECON2 = 0x55;
-    EECON2 = 0xAA;
-    EECON1bits.WR = 1;
-    INTERRUPTbits_GIEH = 1;
-
-    // Avoid accidental writes
-    EECON1 = 0b00000000;
-#endif
-#if defined(CPU_FAMILY_PIC18_K83)
-    // Set up erase
-    TBLPTR = cachedBlock;
-    NVMCON1 = 0b10010100;
-
-    // Perform erase with all interrupts temporarily disabled
-    INTERRUPTbits_GIEH = 0;
-    NVMCON2 = 0x55;
-    NVMCON2 = 0xAA;
-    NVMCON1bits.WR = 1;
-    INTERRUPTbits_GIEH = 1;
-
-    // Avoid accidental writes
-    NVMCON1 = 0b00000000;
-#endif
-#if defined(CPU_FAMILY_PIC18_Q83Q84)
-    // Set up erase
-    NVMADR = cachedBlock;
-    NVMCON1bits.NVMCMD = 0b110;
-
-    // Perform erase with all interrupts temporarily disabled
-    INTERRUPTbits_GIEH = 0;
-    NVMLOCK = 0x55;
-    NVMLOCK = 0xAA;
-    NVMCON0bits.GO = 1;
-    INTERRUPTbits_GIEH = 1;
-
-    // Wait for erase to complete
-    while (NVMCON0bits.GO);
-
-    // Avoid accidental writes
-    NVMCON1bits.NVMCMD = 0b000;
-#endif
-
-    // Update cache status
-    cacheStatus.requiresErase = 0;
+    // Populate the page buffer with the contents of the FLASH page
+    while (n > 1) {             // Read all but the last byte
+        asm("TBLRDPOSTINC");
+        *p++ = TABLAT;
+        --n;
+    }
+    if (n > 0) {
+        asm("TBLRD");           // Last byte
+        *p = TABLAT;
+    }
 }
 
 /**
- * Write all cache data back to the current FLASH block.
+ * Writes the page buffer to the current FLASH page.
  * 
- * If any modification of the cache has involved a bit going from 0 to 1, then
- * the FLASH block is erased before writing (the write process can only change a
- * bit from 1 to 0). Uses stallMemoryWrite callback as all code execution
- * (including interrupts) is stopped until the write is complete (typically
- * 2ms).  There will be two such stoppages if an erase is also required.
- * 
- * @pre cachedBlock set.
- * @pre cacheStatus set.
- * @post cacheStatus updated.
+ * @pre currentPage set.
  */
-static void flushCache() {
+static void writePage() {
 
-    // Perform erase if required
-    if (cacheStatus.requiresErase) eraseCache();
+    TBLPTR = currentPage;
 
-    while (stallMemoryWrite());
+    uint8_t* p = pageBuffer;
+    flashPageOffset_t n = FLASH_PAGE_SIZE;
 
-    TBLPTR = cachedBlock;
-
-    // Populate the internal write buffer with the contents of the cache
-    uint8_t* p = cacheData;
-    flashBlock_t n = FLASH_BLOCK_SIZE;
+    // Populate the holding registers with the contents of the page buffer
     while (n > 1) {             // Write all but the last byte
         TABLAT = *p++;
         asm("TBLWTPOSTINC");
@@ -258,45 +203,45 @@ static void flushCache() {
 
 #if defined(CPU_FAMILY_PIC18_K80)
     // Set up write
-    TBLPTR = cachedBlock;
+    TBLPTR = currentPage;
     EECON1 = 0b10000100;
 
     // Perform write with all interrupts temporarily disabled
-    INTERRUPTbits_GIEH = 0;
+    INTERRUPT_DisableHigh();
     EECON2 = 0x55;
     EECON2 = 0xAA;
     EECON1bits.WR = 1;
-    INTERRUPTbits_GIEH = 1;
+    INTERRUPT_EnableHigh();
 
     // Avoid accidental writes
     EECON1 = 0b00000000;
 #endif
 #if defined(CPU_FAMILY_PIC18_K83)
     // Set up write
-    TBLPTR = cachedBlock;
+    TBLPTR = currentPage;
     NVMCON1 = 0b10000100;
 
     // Perform write with all interrupts temporarily disabled
-    INTERRUPTbits_GIEH = 0;
+    INTERRUPT_DisableHigh();
     NVMCON2 = 0x55;
     NVMCON2 = 0xAA;
     NVMCON1bits.WR = 1;
-    INTERRUPTbits_GIEH = 1;
+    INTERRUPT_EnableHigh();
 
     // Avoid accidental writes
     NVMCON1 = 0b00000000;
 #endif
 #if defined(CPU_FAMILY_PIC18_Q83Q84)
     // Set up write
-    NVMADR = cachedBlock;
+    NVMADR = currentPage;
     NVMCON1bits.NVMCMD = 0b101;
 
     // Perform write with all interrupts temporarily disabled
-    INTERRUPTbits_GIEH = 0;
+    INTERRUPT_DisableHigh();
     NVMLOCK = 0x55;
     NVMLOCK = 0xAA;
     NVMCON0bits.GO = 1;
-    INTERRUPTbits_GIEH = 1;
+    INTERRUPT_EnableHigh();
 
     // Wait for write to complete
     while (NVMCON0bits.GO);
@@ -304,116 +249,198 @@ static void flushCache() {
     // Avoid accidental writes
     NVMCON1bits.NVMCMD = 0b000;
 #endif
+}
 
-    // Update cache status
+/**
+ * Erases the current FLASH page.
+ * 
+ * @pre currentPage set.
+ */
+static void erasePage() {
+
+#if defined(CPU_FAMILY_PIC18_K80)
+    // Set up erase
+    TBLPTR = currentPage;
+    EECON1 = 0b10010100;
+
+    // Perform erase with all interrupts temporarily disabled
+    INTERRUPT_DisableHigh();
+    EECON2 = 0x55;
+    EECON2 = 0xAA;
+    EECON1bits.WR = 1;
+    INTERRUPT_EnableHigh();
+
+    // Avoid accidental writes
+    EECON1 = 0b00000000;
+#endif
+#if defined(CPU_FAMILY_PIC18_K83)
+    // Set up erase
+    TBLPTR = currentPage;
+    NVMCON1 = 0b10010100;
+
+    // Perform erase with all interrupts temporarily disabled
+    INTERRUPT_DisableHigh();
+    NVMCON2 = 0x55;
+    NVMCON2 = 0xAA;
+    NVMCON1bits.WR = 1;
+    INTERRUPT_EnableHigh();
+
+    // Avoid accidental writes
+    NVMCON1 = 0b00000000;
+#endif
+#if defined(CPU_FAMILY_PIC18_Q83Q84)
+    // Set up erase
+    NVMADR = currentPage;
+    NVMCON1bits.NVMCMD = 0b110;
+
+    // Perform erase with all interrupts temporarily disabled
+    INTERRUPT_DisableHigh();
+    NVMLOCK = 0x55;
+    NVMLOCK = 0xAA;
+    NVMCON0bits.GO = 1;
+    INTERRUPT_EnableHigh();
+
+    // Wait for erase to complete
+    while (NVMCON0bits.GO);
+
+    // Avoid accidental writes
+    NVMCON1bits.NVMCMD = 0b000;
+#endif
+}
+
+/**
+ * Write all cache data back to the current FLASH page.
+ * 
+ * If any modification of the cache has involved a bit going from 0 to 1, then
+ * the FLASH page is erased before writing (the write process can only change a
+ * bit from 1 to 0). Uses stallMemoryWrite callback as all code execution
+ * (including interrupts) is stopped until the write is complete (typically
+ * 2ms).  There will be two such stoppages if an erase is also required.
+ * 
+ * @pre currentPage set.
+ * @pre cacheStatus set.
+ * @post cacheStatus updated.
+ */
+static void flushCache() {
+
+    // Perform erase if required
+    if (cacheStatus.requiresErase) {
+        while (stallMemoryWrite());
+        erasePage();
+        cacheStatus.requiresErase = 0;
+    }
+
+    // Perform write
+    while (stallMemoryWrite());
+    writePage();
     cacheStatus.isModified = 0;
 }
 
 /**
- * Ensures that the correct cache block is loaded into RAM from FLASH for the
- * given address.
+ * Ensures that the correct cache page is loaded into the page buffer from
+ * FLASH for the given address.
  * 
- * If an existing cache block is loaded, it is flushed back to FLASH.
+ * If an existing cache page is loaded, it is flushed back to FLASH.
  * 
  * @pre cacheStatus set.
  * @param FLASH address to be loaded.
- * @post cacheBlock set.
- * @post cacheOffset set.
+ * @post currentPage set.
+ * @post pageOffset set.
  * @post cacheStatus updated.
  */
-static void loadBlock(flashAddr_t addr) {
+static void loadPage(flashAddr_t addr) {
 
     // Find the base (boundary) value of the given address
-    flashAddr_t requiredBlock = addr & (flashAddr_t) ~(FLASH_BLOCK_SIZE - 1);
+    flashAddr_t requiredPage = addr & (flashAddr_t) ~(FLASH_PAGE_SIZE - 1);
 
-    // If a different cache block is loaded, flush it
-    if (cacheStatus.isLoaded && cachedBlock != requiredBlock) {
+    // If a different cache page is loaded, flush it
+    if (cacheStatus.isLoaded && currentPage != requiredPage) {
         if (cacheStatus.isModified) flushCache();
         cacheStatus.flags = 0;
     }
 
-    // If the required cache block is not loaded, load it
+    // If the required cache page is not loaded, load it
     if (!cacheStatus.isLoaded) {
-        cachedBlock = requiredBlock;
-        readFlash(cachedBlock, cacheData, FLASH_BLOCK_SIZE);
+        currentPage = requiredPage;
+        readPage();
         cacheStatus.isLoaded = 1;
     }
 
-    // Set the cache block offset (the next byte to be read/written)
-    cacheOffset = (flashBlock_t) (addr & (FLASH_BLOCK_SIZE - 1));
+    // Set the cache page offset (the next byte to be read/written)
+    pageOffset = (flashPageOffset_t) (addr & (FLASH_PAGE_SIZE - 1));
 }
 
 /**
- * Loads the next cache block from FLASH.
+ * Loads the next cache page from FLASH.
  * 
- * @pre cacheBlock set.
+ * @pre currentPage set.
  * @pre cacheStatus set.
- * @post cacheBlock updated.
- * @post cacheOffset set.
+ * @post currentPage updated.
+ * @post pageOffset set.
  * @post cacheStatus updated.
  */
-static void loadNextBlock() {
+static void loadNextPage() {
 
-    // Flush the current cache block
+    // Flush the current cache page
     if (cacheStatus.isModified) flushCache();
     cacheStatus.flags = 0;
 
-    // Read the next cache block from FLASH
-    cachedBlock += FLASH_BLOCK_SIZE;
-    readFlash(cachedBlock, cacheData, FLASH_BLOCK_SIZE);
+    // Read the next cache page from FLASH
+    currentPage += FLASH_PAGE_SIZE;
+    readPage();
     cacheStatus.isLoaded = 1;
 
-    // Set the cache block offset (the next byte to be read/written)
-    cacheOffset = 0;
+    // Set the cache page offset (the next byte to be read/written)
+    pageOffset = 0;
 }
 
 /**
  * Reads a byte from the current cache location.
  * 
- * @pre cacheBlock set.
- * @pre cacheOffset set.
+ * @pre currentPage set.
+ * @pre pageOffset set.
  * @pre cacheStatus set.
- * @post cacheBlock possibly updated.
- * @post cacheOffset updated.
+ * @post currentPage possibly updated.
+ * @post pageOffset updated.
  * @post cacheStatus updated.
  */
 static uint8_t readCache() {
 
-    // If the last operation made cascheOffset cross the cache block boundary,
-    // load the next block
-    if (cacheOffset >= FLASH_BLOCK_SIZE) loadNextBlock();
+    // If the last operation made cascheOffset cross the cache page boundary,
+    // load the next page
+    if (pageOffset >= FLASH_PAGE_SIZE) loadNextPage();
 
-    // Read a byte, and increment cacheOffset
-    return cacheData[cacheOffset++];
+    // Read a byte, and increment pageOffset
+    return pageBuffer[pageOffset++];
 }
 
 /**
  * Writes a byte to the current cache location.
  * 
- * @pre cacheBlock set.
- * @pre cacheOffset set.
+ * @pre currentPage set.
+ * @pre pageOffset set.
  * @pre cacheStatus set.
- * @post cacheBlock possibly updated.
- * @post cacheOffset updated.
+ * @post currentPage possibly updated.
+ * @post pageOffset updated.
  * @post cacheStatus updated.
  */
 static void writeCache(uint8_t data) {
     
-    // If the last operation made cascheOffset cross the cache block boundary,
-    // load the next block
-    if (cacheOffset >= FLASH_BLOCK_SIZE) loadNextBlock();
+    // If the last operation made cascheOffset cross the cache page boundary,
+    // load the next page
+    if (pageOffset >= FLASH_PAGE_SIZE) loadNextPage();
 
-    // Write a byte if its value has changed; if any 0s become 1s, mark block
+    // Write a byte if its value has changed; if any 0s become 1s, mark page
     // for erase before write to FLASH
-    uint8_t curData = cacheData[cacheOffset];
+    uint8_t curData = pageBuffer[pageOffset];
     if (data != curData) {
         if (data & ~curData) cacheStatus.requiresErase = 1;
-        cacheData[cacheOffset] = data;
+        pageBuffer[pageOffset] = data;
         cacheStatus.isModified = 1;
     }
 
-    // Increment cacheOffset
-    cacheOffset++;
+    // Increment pageOffset
+    pageOffset++;
 }
 
 /**
@@ -424,8 +451,8 @@ static void writeCache(uint8_t data) {
  */
 uint8_t readFlashCached8(flashAddr_t addr) {
 
-    // Make sure correct block is loaded into cache
-    loadBlock(addr);
+    // Make sure correct page is loaded into cache
+    loadPage(addr);
 
     // Read byte
     return readCache();
@@ -439,8 +466,8 @@ uint8_t readFlashCached8(flashAddr_t addr) {
  */
 uint16_t readFlashCached16(flashAddr_t addr) {
 
-    // Make sure correct block is loaded into cache
-    loadBlock(addr);
+    // Make sure correct page is loaded into cache
+    loadPage(addr);
 
     // Read word
     bytes16_t v;
@@ -458,8 +485,8 @@ uint16_t readFlashCached16(flashAddr_t addr) {
  */
 void readFlashCached(flashAddr_t addr, void* dst, size_t n) {
 
-    // Make sure correct block is loaded into cache
-    loadBlock(addr);
+    // Make sure correct page is loaded into cache
+    loadPage(addr);
 
     // Read buffer
     uint8_t* p = dst;
@@ -477,8 +504,8 @@ void readFlashCached(flashAddr_t addr, void* dst, size_t n) {
  */
 void writeFlashCached8(flashAddr_t addr, uint8_t data) {
 
-    // Make sure correct block is loaded into cache
-    loadBlock(addr);
+    // Make sure correct page is loaded into cache
+    loadPage(addr);
 
     // Write byte
     writeCache(data);
@@ -492,8 +519,8 @@ void writeFlashCached8(flashAddr_t addr, uint8_t data) {
  */
 void writeFlashCached16(flashAddr_t addr, uint16_t data) {
 
-    // Make sure correct block is loaded into cache
-    loadBlock(addr);
+    // Make sure correct page is loaded into cache
+    loadPage(addr);
 
     // Write word
     writeCache(((bytes16_t) data).bytes[0]);
@@ -509,8 +536,8 @@ void writeFlashCached16(flashAddr_t addr, uint16_t data) {
  */
 void writeFlashCached(flashAddr_t addr, void* src, size_t n) {
     
-    // Make sure correct block is loaded into cache
-    loadBlock(addr);
+    // Make sure correct page is loaded into cache
+    loadPage(addr);
 
     // Write buffer
     uint8_t* p = src;
@@ -529,8 +556,8 @@ void writeFlashCached(flashAddr_t addr, void* src, size_t n) {
  */
 void fillFlashCached(flashAddr_t addr, uint8_t data, size_t n) {
     
-    // Make sure correct block is loaded into cache
-    loadBlock(addr);
+    // Make sure correct page is loaded into cache
+    loadPage(addr);
 
     // Write value to each byte
     while (n > 0) {

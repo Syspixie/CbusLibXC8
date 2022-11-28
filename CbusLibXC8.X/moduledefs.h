@@ -134,7 +134,7 @@ extern "C" {
 // Next is nodeVariables, on a word boundary
 #define NODE_VAR_ADDRESS ((FLASH_VERSION_ADDRESS - NUM_NODE_VARS) & ~1)
 // Finally eventTable, on a block boundary
-#define EVENTS_FLASH_ADDRESS ((NODE_VAR_ADDRESS - (MAX_NUM_EVENTS * EVENT_SIZE)) & ~(FLASH_BLOCK_SIZE - 1))
+#define EVENTS_FLASH_ADDRESS ((NODE_VAR_ADDRESS - (MAX_NUM_EVENTS * EVENT_SIZE)) & ~(FLASH_PAGE_SIZE - 1))
 
 
 #ifdef	__cplusplus

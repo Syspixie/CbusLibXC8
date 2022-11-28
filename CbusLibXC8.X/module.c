@@ -195,8 +195,8 @@ void processModule(void) {
     initCbusCan();
 
     // Enable interrupts
-    INTERRUPTbits_GIEH = 1;
-    INTERRUPTbits_GIEL = 1;
+    INTERRUPT_EnableHigh();
+    INTERRUPT_EnableLow();
 
     // Forever...
     while (true) {

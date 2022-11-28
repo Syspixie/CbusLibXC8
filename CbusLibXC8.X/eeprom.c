@@ -136,11 +136,11 @@ static void writeEE(uint8_t data) {
     EECON1 = 0b00000100;
 
     // Initiate write with all interrupts temporarily disabled
-    INTERRUPTbits_GIEH = 0;
+    INTERRUPT_DisableHigh();
     EECON2 = 0x55;
     EECON2 = 0xAA;
     EECON1bits.WR = 1;
-    INTERRUPTbits_GIEH = 1;
+    INTERRUPT_EnableHigh();
 
     // Wait for write to complete
     while (EECON1bits.WR);      // Blocking loop
@@ -155,11 +155,11 @@ static void writeEE(uint8_t data) {
     NVMCON1 = 0b00000100;
 
     // Initiate write with all interrupts temporarily disabled
-    INTERRUPTbits_GIEH = 0;
+    INTERRUPT_DisableHigh();
     NVMCON2 = 0x55;
     NVMCON2 = 0xAA;
     NVMCON1bits.WR = 1;
-    INTERRUPTbits_GIEH = 1;
+    INTERRUPT_EnableHigh();
 
     // Wait for write to complete
     while (NVMCON1bits.WR);     // Blocking loop
@@ -175,11 +175,11 @@ static void writeEE(uint8_t data) {
     NVMCON1bits.NVMCMD = 0b011;
 
     // Initiate write with all interrupts temporarily disabled
-    INTERRUPTbits_GIEH = 0;
+    INTERRUPT_DisableHigh();
     NVMLOCK = 0x55;
     NVMLOCK = 0xAA;
     NVMCON0bits.GO = 1;
-    INTERRUPTbits_GIEH = 1;
+    INTERRUPT_EnableHigh();
 
     // Wait for write to complete
     while (NVMCON0bits.GO);     // Blocking loop

@@ -73,10 +73,6 @@ extern "C" {
 #include "moduledefs.h"
 
 
-    typedef FLASH_ADDRESS_TYPE flashAddr_t;
-    typedef FLASH_BLOCK_TYPE flashBlock_t;
-
-
     void initFlash(void);
     uint8_t readFlash8(flashAddr_t addr);
     uint16_t readFlash16(flashAddr_t addr);

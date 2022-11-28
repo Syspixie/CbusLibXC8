@@ -320,13 +320,13 @@ void ecanSendRtrRequest() {
 
     // Send RTR request, which will trigger a response from all currently
     // active nodes.
-    INTERRUPTbits_GIEL = 0;
+    INTERRUPT_DisableLow();
     ECANCONbits.EWIN = ewinTXB1;
     ewin.SIDH = encodedCurStdID.valueH;
     ewin.SIDL = encodedCurStdID.valueL;
     ewin.DLC = 0b01000000;
     ewin.TXCONbits.TXREQ = 1;
-    INTERRUPTbits_GIEL = 1;
+    INTERRUPT_EnableLow();
 
     // Note time for timeout checking
     txStartedMillis[1] = getMillisShort();
@@ -338,13 +338,13 @@ void ecanSendRtrRequest() {
 void ecanSendRtrResponse() {
 
     // Send response which includes our CAN ID
-    INTERRUPTbits_GIEL = 0;
+    INTERRUPT_DisableLow();
     ECANCONbits.EWIN = ewinTXB2;
     ewin.SIDH = encodedCurStdID.valueH;
     ewin.SIDL = encodedCurStdID.valueL;
     ewin.DLC = 0;
     ewin.TXCONbits.TXREQ = 1;
-    INTERRUPTbits_GIEL = 1;
+    INTERRUPT_EnableLow();
 
     // Note time for timeout checking
     txStartedMillis[2] = getMillisShort();

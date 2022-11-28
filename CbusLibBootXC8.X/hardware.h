@@ -76,65 +76,70 @@ extern "C" {
 #define CPU_FAMILY_PIC18_K80
 #define CPU_ID P18F25K80
 #define FLASH_TOP 0x007FFF              // 32K bytes
-#define FLASH_ADDRESS_TYPE uint16_t
-#define FLASH_BLOCK_SIZE 64             // Erase & write
-#define FLASH_BLOCK_TYPE uint8_t
+#define FLASH_PAGE_SIZE 64
 #define EEPROM_TOP 0x03FF               // 1024 bytes
+typedef uint16_t flashAddr_t;
+typedef uint8_t flashPageOffset_t;
 #endif
 #if defined(_18F26K80) || defined(_18LF26K80)
 #define CPU_FAMILY_PIC18_K80
 #define CPU_ID P18F26K80
 #define FLASH_TOP 0x00FFFF              // 64K bytes
-#define FLASH_ADDRESS_TYPE uint16_t
-#define FLASH_BLOCK_SIZE 64             // Erase & write
-#define FLASH_BLOCK_TYPE uint8_t
+#define FLASH_PAGE_SIZE 64
 #define EEPROM_TOP 0x03FF               // 1024 bytes
+typedef uint16_t flashAddr_t;
+typedef uint8_t flashPageOffset_t;
 #endif
 #if defined(_18F25K83) || defined(_18LF25K83)
 #define CPU_FAMILY_PIC18_K83
 #define CPU_ID P18F26K83        // There isn't a 25K83 definded, so we lie...
 #define FLASH_TOP 0x007FFF              // 32K bytes
-#define FLASH_ADDRESS_TYPE uint16_t
-#define FLASH_BLOCK_SIZE 128            // Erase & write
-#define FLASH_BLOCK_TYPE uint8_t
+#define FLASH_PAGE_SIZE 128
 #define EEPROM_TOP 0x03FF               // 1024 bytes
+typedef uint16_t flashAddr_t;
+typedef uint8_t flashPageOffset_t;
 #endif
 #if defined(_18F26K83) || defined(_18LF26K83)
 #define CPU_FAMILY_PIC18_K83
 #define CPU_ID P18F26K83
 #define FLASH_TOP 0x00FFFF              // 64K bytes
-#define FLASH_ADDRESS_TYPE uint16_t
-#define FLASH_BLOCK_SIZE 128            // Erase & write
-#define FLASH_BLOCK_TYPE uint8_t
+#define FLASH_PAGE_SIZE 128
 #define EEPROM_TOP 0x03FF               // 1024 bytes
+typedef uint16_t flashAddr_t;
+typedef uint8_t flashPageOffset_t;
 #endif
 #if defined(_18F27Q83)
 #define CPU_FAMILY_PIC18_Q83Q84
 #define CPU_ID P18F27Q83
 #define FLASH_TOP 0x01FFFF              // 128K bytes
-#define FLASH_ADDRESS_TYPE uint24_t
-#define FLASH_BLOCK_SIZE 256            // Erase & write
-#define FLASH_BLOCK_TYPE uint16_t
+#define FLASH_PAGE_SIZE 256
 #define EEPROM_TOP 0x03FF               // 1024 bytes
+typedef uint24_t flashAddr_t;
+typedef uint16_t flashPageOffset_t;
 #endif
 
 #define _XTAL_FREQ 64000000             // Used by __delay_ms macro
 
 #if defined(CPU_FAMILY_PIC18_K80)
-#define INTERRUPTbits_GIEH INTCONbits.GIEH
-#define INTERRUPTbits_GIEL INTCONbits.GIEL
+#define INTERRUPT_DisableHigh() (INTCONbits.GIEH = 0)
+#define INTERRUPT_EnableHigh() (INTCONbits.GIEH = 1)
+#define INTERRUPT_DisableLow() (INTCONbits.GIEL = 0)
+#define INTERRUPT_EnableLow() (INTCONbits.GIEL = 1)
 #define ECAN_BUFFERS_BASE_ADDRESS 0x0F60    // Access Bank address (RXB0CON)
 #endif
 #if defined(CPU_FAMILY_PIC18_K83)
-#define INTERRUPTbits_GIEH INTCON0bits.GIEH
-#define INTERRUPTbits_GIEL INTCON0bits.GIEL
+#define INTERRUPT_DisableHigh() (INTCON0bits.GIEH = 0)
+#define INTERRUPT_EnableHigh() (INTCON0bits.GIEH = 1)
+#define INTERRUPT_DisableLow() (INTCON0bits.GIEL = 0)
+#define INTERRUPT_EnableLow() (INTCON0bits.GIEL = 1)
 #define IVT_BASE_ADDRESS 0x000760           // 80 vectors; 0x000800 - (2 * 80)
-// Note: datasheet incorrectly specifies address as 0x0F60
 #define ECAN_BUFFERS_BASE_ADDRESS 0x3F80    // Access Bank address (RXB0CON)
 #endif
 #if defined(CPU_FAMILY_PIC18_Q83Q84)
-#define INTERRUPTbits_GIEH INTCON0bits.GIEH
-#define INTERRUPTbits_GIEL INTCON0bits.GIEL
+#define INTERRUPT_DisableHigh() (INTCON0bits.GIEH = 0)
+#define INTERRUPT_EnableHigh() (INTCON0bits.GIEH = 1)
+#define INTERRUPT_DisableLow() (INTCON0bits.GIEL = 0)
+#define INTERRUPT_EnableLow() (INTCON0bits.GIEL = 1)
 #define IVT_BASE_ADDRESS 0x0006E0           // 144 vectors; 0x000800 - (2 * 144)
 #define CAN1_BUFFERS_BASE_ADDRESS 0x3800
 #endif
