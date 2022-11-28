@@ -80,54 +80,27 @@
 #if defined(CAN1_BUFFERS_BASE_ADDRESS)
 
 
-#define TX_PRIORITY_HIKE_MILLIS 750     // 0.75 seconds
-#define TX_TIMEOUT_MILLIS 1000          // 1 second
+typedef struct {
+    uint16_t stdID;    // Standard ID (used for receive only)
+    union {
+        struct {
+            unsigned DLC : 4;
+            unsigned IDE : 1;
+            unsigned RTR : 1;
+            unsigned BRS : 1;   // CAN FD only
+            unsigned FDF : 1;   // CAN FD only
+        } dlcBits;
+        uint8_t dlc;
+    };
+    uint8_t data[8];
+} canFrame_t;
 
 
 // From can_types.h
 
 
-typedef union {
-    uint8_t msgfields;
-    struct {
-        uint8_t idType : 1; // 1 bit (Standard Frame or Extended Frame)
-        uint8_t frameType : 1; // 1 bit (Data Frame or RTR Frame)
-        uint8_t dlc : 4; // 4 bit (No of data bytes a message frame contains)
-        uint8_t formatType : 1; // 1 bit (CAN 2.0 Format or CAN_FD Format)
-        uint8_t brs : 1; // 1 bit (Bit Rate Switch)
-    };
-} CAN_MSG_FIELD;
-
-typedef struct {
-    uint32_t msgId; // 29 bit (SID: 11bit, EID:18bit)
-    CAN_MSG_FIELD field; // CAN TX/RX Message Object Control
-    volatile uint8_t *data; // Pointer to message data
-} CAN_MSG_OBJ;
-
-typedef enum {
-    CAN_NON_BRS_MODE = 0,
-    CAN_BRS_MODE = 1 //Supported only in CAN FD mode
-} CAN_MSG_OBJ_BRS_MODE;
-
-typedef enum {
-    CAN_FRAME_STD = 0,
-    CAN_FRAME_EXT = 1,
-} CAN_MSG_OBJ_ID_TYPE;
-
-typedef enum {
-    CAN_FRAME_DATA = 0,
-    CAN_FRAME_RTR = 1,
-} CAN_MSG_OBJ_FRAME_TYPE;
-
-typedef enum {
-    CAN_2_0_FORMAT = 0,
-    CAN_FD_FORMAT = 1 //Supported only in CAN FD mode
-} CAN_MSG_OBJ_TYPE;
-
 typedef enum {
     CAN_TX_MSG_REQUEST_SUCCESS = 0, // Transmit message object successfully placed into Transmit FIFO
-    CAN_TX_MSG_REQUEST_DLC_EXCEED_ERROR = 1, // Transmit message object DLC size is more than Transmit FIFO configured DLC size
-    CAN_TX_MSG_REQUEST_BRS_ERROR = 2, // Transmit FIFO is configured has Non BRS mode and CAN TX Message object has BRS enabled
     CAN_TX_MSG_REQUEST_FIFO_FULL = 3, // Transmit FIFO is Full
 } CAN_TX_MSG_REQUEST_STATUS;
 
@@ -204,8 +177,6 @@ typedef enum {
 #define EID_HIGH_MASK                   (0x1FU)
 #define IDE_POSN                        (4U)
 #define RTR_POSN                        (5U)
-#define BRS_POSN                        (6U)
-#define FDF_POSN                        (7U)
 
 #define DLCToPayloadBytes(x)            (DLC_BYTES[(x)])
 #define PLSIZEToPayloadBytes(x)         (DLCToPayloadBytes(8u + (x)))
@@ -249,7 +220,7 @@ static volatile struct CAN_FIFOREG * const FIFO = (struct CAN_FIFOREG *) &C1TXQC
 static const uint8_t DLC_BYTES[] = {0U, 1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U};
 
 // Current standard ID
-uint16_t curStdID;
+bytes16_t curStdID;
 
 
 static void CAN1_RX_FIFO_ResetInfo(void) {
@@ -408,40 +379,24 @@ static CAN_RX_FIFO_STATUS GetRxFifoStatus(uint8_t validChannel) {
     return FIFO[validChannel].STAL & (CAN_RX_MSG_AVAILABLE | CAN_RX_MSG_OVERFLOW);
 }
 
-static void ReadMessageFromFifo(uint8_t *rxFifoObj, CAN_MSG_OBJ *rxCanMsg) {
+static void ReadMessageFromFifo(uint8_t* rxFifoObj, canFrame_t *rxCanMsg) {
 
-    uint32_t msgId;
-    uint8_t status = rxFifoObj[4];
-    const uint8_t payloadOffsetBytes =
-            4U // ID
-            + 1U // FDF, BRS, RTR, ...
-            + 1U // FILHIT, ...
-            + 2U; // Unimplemented
+    bytes16_t v;
+    v.valueL = rxFifoObj[0];
+    v.valueH = rxFifoObj[1] & 0b00000111;
+    rxCanMsg->stdID = v.value;
 
-    rxCanMsg->field.dlc = status;
-    rxCanMsg->field.idType = (status & (1UL << IDE_POSN)) ? CAN_FRAME_EXT : CAN_FRAME_STD;
-    rxCanMsg->field.frameType = (status & (1UL << RTR_POSN)) ? CAN_FRAME_RTR : CAN_FRAME_DATA;
-    rxCanMsg->field.brs = (status & (1UL << BRS_POSN)) ? CAN_BRS_MODE : CAN_NON_BRS_MODE;
-    rxCanMsg->field.formatType = (status & (1UL << FDF_POSN)) ? CAN_FRAME_EXT : CAN_FRAME_STD;
-
-    msgId = rxFifoObj[1] & SID_HIGH_MASK;
-    msgId <<= SID_LOW_WIDTH;
-    msgId |= rxFifoObj[0];
-    if (CAN_FRAME_EXT == rxCanMsg->field.idType) {
-        msgId <<= EID_HIGH_WIDTH;
-        msgId |= (rxFifoObj[3] & EID_HIGH_MASK);
-        msgId <<= EID_MID_WIDTH;
-        msgId |= rxFifoObj[2];
-        msgId <<= EID_LOW_WIDTH;
-        msgId |= (rxFifoObj[1] & EID_LOW_MASK) >> EID_LOW_POSN;
+    rxCanMsg->dlc = rxFifoObj[4];
+    uint8_t len = rxCanMsg->dlcBits.DLC;
+    if (len > 8) {
+        len = 8;
+        rxCanMsg->dlcBits.DLC = len;
     }
-    rxCanMsg->msgId = msgId;
 
-    utilMemcpy(rxMsgData, rxFifoObj + payloadOffsetBytes, DLCToPayloadBytes(rxCanMsg->field.dlc));
-    rxCanMsg->data = rxMsgData;
+    utilMemcpy(rxCanMsg->data, &rxFifoObj[8], len);
 }
 
-bool CAN1_Receive(CAN_MSG_OBJ *rxCanMsg)
+bool CAN1_Receive(canFrame_t* rxCanMsg)
 {
     uint8_t index;
     bool status = false;
@@ -453,7 +408,7 @@ bool CAN1_Receive(CAN_MSG_OBJ *rxCanMsg)
 
         if (CAN_RX_MSG_AVAILABLE == (rxMsgStatus & CAN_RX_MSG_AVAILABLE))
         {
-            uint8_t *rxFifoObj = (uint8_t *) FIFO[channel].UA;
+            uint8_t* rxFifoObj = (uint8_t*) FIFO[channel].UA;
             
             if (rxFifoObj != NULL)
             {
@@ -524,60 +479,19 @@ static CAN_TX_FIFO_STATUS GetTxFifoStatus(uint8_t validChannel) {
     return (FIFO[validChannel].STAL & _C1FIFOSTA1L_TFNRFNIF_MASK);
 }
 
-static void WriteMessageToFifo(uint8_t *txFifoObj, CAN_MSG_OBJ *txCanMsg) {
+static void WriteMessageToFifo(uint8_t* txFifoObj, canFrame_t* txCanMsg) {
 
-    uint32_t msgId = txCanMsg->msgId;
-    uint8_t status;
-    const uint8_t payloadOffsetBytes =
-            4U // ID
-            + 1U // FDF, BRS, RTR, ...
-            + 1U // SEQ[6:0], ESI
-            + 2U; // SEQ
+    txFifoObj[0] = ((bytes16_t) txCanMsg->stdID).valueL;
+    txFifoObj[1] = ((bytes16_t) txCanMsg->stdID).valueH;
 
-    if (CAN_FRAME_EXT == txCanMsg->field.idType) {
-        txFifoObj[1] = (msgId << EID_LOW_POSN) & EID_LOW_MASK;
-        msgId >>= EID_LOW_WIDTH;
-        txFifoObj[2] = (uint8_t) msgId;
-        msgId >>= EID_MID_WIDTH;
-        txFifoObj[3] = (msgId & EID_HIGH_MASK);
-        msgId >>= EID_HIGH_WIDTH;
-    } else {
-        txFifoObj[1] = txFifoObj[2] = txFifoObj[3] = 0;
-    }
+    txFifoObj[4] = txCanMsg->dlc;
 
-    txFifoObj[0] = (uint8_t) msgId;
-    msgId >>= SID_LOW_WIDTH;
-    txFifoObj[1] |= (msgId & SID_HIGH_MASK);
-
-    status = txCanMsg->field.dlc;
-    status |= (txCanMsg->field.idType << IDE_POSN);
-    status |= (txCanMsg->field.frameType << RTR_POSN);
-    status |= (txCanMsg->field.brs << BRS_POSN);
-    status |= (txCanMsg->field.formatType << FDF_POSN);
-    txFifoObj[4] = status;
-
-    if (CAN_FRAME_DATA == txCanMsg->field.frameType) {
-        utilMemcpy(txFifoObj + payloadOffsetBytes, txCanMsg->data, DLCToPayloadBytes(txCanMsg->field.dlc));
-    }
+    utilMemcpy(&txFifoObj[8], txCanMsg->data, txCanMsg->dlcBits.DLC);
 }
 
-static CAN_TX_MSG_REQUEST_STATUS ValidateTransmission(uint8_t validChannel, CAN_MSG_OBJ *txCanMsg) {
+static CAN_TX_MSG_REQUEST_STATUS ValidateTransmission(uint8_t validChannel) {
 
     CAN_TX_MSG_REQUEST_STATUS txMsgStatus = CAN_TX_MSG_REQUEST_SUCCESS;
-    CAN_MSG_FIELD field = txCanMsg->field;
-    uint8_t plsize = 0;
-
-    if (CAN_BRS_MODE == field.brs && (CAN_NORMAL_2_0_MODE == CAN1_OperationModeGet())) {
-        txMsgStatus |= CAN_TX_MSG_REQUEST_BRS_ERROR;
-    }
-
-    if (field.dlc > DLC_8 && (CAN_2_0_FORMAT == field.formatType || CAN_NORMAL_2_0_MODE == CAN1_OperationModeGet())) {
-        txMsgStatus |= CAN_TX_MSG_REQUEST_DLC_EXCEED_ERROR;
-    }
-
-    if (DLCToPayloadBytes(field.dlc) > PLSIZEToPayloadBytes(plsize)) {
-        txMsgStatus |= CAN_TX_MSG_REQUEST_DLC_EXCEED_ERROR;
-    }
 
     if (CAN_TX_FIFO_FULL == GetTxFifoStatus(validChannel)) {
         txMsgStatus |= CAN_TX_MSG_REQUEST_FIFO_FULL;
@@ -586,12 +500,12 @@ static CAN_TX_MSG_REQUEST_STATUS ValidateTransmission(uint8_t validChannel, CAN_
     return txMsgStatus;
 }
 
-static CAN_TX_MSG_REQUEST_STATUS CAN1_Transmit(const CAN1_TX_FIFO_CHANNELS fifoChannel, CAN_MSG_OBJ *txCanMsg) {
+static CAN_TX_MSG_REQUEST_STATUS CAN1_Transmit(const CAN1_TX_FIFO_CHANNELS fifoChannel, canFrame_t* txCanMsg) {
 
     CAN_TX_MSG_REQUEST_STATUS status = CAN_TX_MSG_REQUEST_FIFO_FULL;
 
     if (isTxChannel(fifoChannel)) {
-        status = ValidateTransmission(fifoChannel, txCanMsg);
+        status = ValidateTransmission(fifoChannel);
         if (CAN_TX_MSG_REQUEST_SUCCESS == status) {
             uint8_t *txFifoObj = (uint8_t *) FIFO[fifoChannel].UA;
 
@@ -743,7 +657,7 @@ void initCan1() {
  */
 void can1SetID(uint16_t stdID) {
 
-    curStdID = stdID;
+    curStdID.value = stdID;
 }
 
 /**
@@ -751,13 +665,9 @@ void can1SetID(uint16_t stdID) {
  */
 void can1SendRtrRequest() {
 
-    CAN_MSG_OBJ msg;
-    msg.msgId = curStdID;
-    msg.field.formatType = CAN_2_0_FORMAT;
-    msg.field.brs = CAN_NON_BRS_MODE;
-    msg.field.frameType = CAN_FRAME_RTR;
-    msg.field.idType = CAN_FRAME_STD;
-    msg.field.dlc = DLC_0;
+    canFrame_t msg;
+    msg.stdID = curStdID.value;
+    msg.dlc = 0b00100000;
     CAN1_Transmit(0, &msg);
 }
 
@@ -766,13 +676,9 @@ void can1SendRtrRequest() {
  */
 void can1SendRtrResponse() {
 
-    CAN_MSG_OBJ msg;
-    msg.msgId = curStdID;
-    msg.field.formatType = CAN_2_0_FORMAT;
-    msg.field.brs = CAN_NON_BRS_MODE;
-    msg.field.frameType = CAN_FRAME_DATA;
-    msg.field.idType = CAN_FRAME_STD;
-    msg.field.dlc = DLC_0;
+    canFrame_t msg;
+    msg.stdID = curStdID.value;
+    msg.dlc = 0;
     CAN1_Transmit(0, &msg);
 }
 
@@ -783,14 +689,10 @@ void can1SendRtrResponse() {
  */
 void can1Transmit() {
 
-    CAN_MSG_OBJ msg;
-    msg.msgId = curStdID;
-    msg.field.formatType = CAN_2_0_FORMAT;
-    msg.field.brs = CAN_NON_BRS_MODE;
-    msg.field.frameType = CAN_FRAME_DATA;
-    msg.field.idType = CAN_FRAME_STD;
-    msg.field.dlc = (cbusMsg[0] >> 5) + 1;
-    msg.data = cbusMsg;
+    canFrame_t msg;
+    msg.stdID = curStdID.value;
+    msg.dlc = (cbusMsg[0] >> 5) + 1;
+    utilMemcpy(msg.data, cbusMsg, msg.dlcBits.DLC);
     CAN1_Transmit(0, &msg);
 }
 
@@ -807,17 +709,15 @@ int8_t can1Receive(bool(* msgCheckFunc)(uint16_t stdID, uint8_t dataLen, volatil
     if (CAN1_ReceivedMessageCountGet() == 0) return -1;
 
     // Get message; done if error
-    CAN_MSG_OBJ msg;
+    canFrame_t msg;
     if (!CAN1_Receive(&msg)) return -1;
 
     // Check for things we can't handle (should never happen if hardware config OK)
-    if (msg.field.formatType != CAN_2_0_FORMAT
-            | msg.field.brs != CAN_NON_BRS_MODE
-            | msg.field.idType != CAN_FRAME_STD) return -1;
+    if (msg.dlc & 0b11010000) return -1;
 
     // Check for CBUS message
-    volatile uint8_t* data = (msg.field.frameType == CAN_FRAME_RTR) ? NULL : msg.data;
-    bool haveMsg = msgCheckFunc((uint16_t) msg.msgId, msg.field.dlc, data);
+    volatile uint8_t* data = (msg.dlcBits.RTR) ? NULL : msg.data;
+    bool haveMsg = msgCheckFunc((uint16_t) msg.stdID, msg.dlcBits.DLC, data);
 
     return haveMsg ? 1 : 0;
 }
