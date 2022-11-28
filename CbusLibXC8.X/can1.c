@@ -105,49 +105,20 @@ typedef enum {
 } CAN_TX_MSG_REQUEST_STATUS;
 
 typedef enum {
-    CAN_NORMAL_FD_MODE = 0, //Supported only in CAN FD mode
-    CAN_DISABLE_MODE = 1,
-    CAN_INTERNAL_LOOPBACK_MODE = 2,
-    CAN_LISTEN_ONLY_MODE = 3,
-    CAN_CONFIGURATION_MODE = 4,
-    CAN_EXTERNAL_LOOPBACK_MODE = 5,
-    CAN_NORMAL_2_0_MODE = 6,
-    CAN_RESTRICTED_OPERATION_MODE = 7,
-} CAN_OP_MODES;
-
-typedef enum {
-    CAN_OP_MODE_REQUEST_SUCCESS, // Requested Operation mode set successfully
-    CAN_OP_MODE_REQUEST_FAIL, // Requested Operation mode set failure. Set configuration mode before setting CAN normal or debug operation mode.
-    CAN_OP_MODE_SYS_ERROR_OCCURED // System error occurred while setting Operation mode.
-} CAN_OP_MODE_STATUS;
+    opModeNormalFD = 0,         //CAN FD only
+    opModeDisable = 1,
+    opModeInternalLoopback = 2,
+    opModeListenOnly = 3,
+    opModeConfiguration = 4,
+    opModeExternalLoopback = 5,
+    opModeNormal = 6,
+    opModeRestrictedOperation = 7,
+} opMode_t;
 
 typedef enum {
     CAN_TX_FIFO_FULL,
     CAN_TX_FIFO_AVAILABLE,
 } CAN_TX_FIFO_STATUS;
-
-typedef enum {
-    /*DLC_0 to DLC_8 for CAN 2.0 and CAN FD*/
-    DLC_0,
-    DLC_1,
-    DLC_2,
-    DLC_3,
-    DLC_4,
-    DLC_5,
-    DLC_6,
-    DLC_7,
-    DLC_8,
-
-    //Supported only in CAN FD mode
-    /*DLC_12 to DLC_64 for CAN FD*/
-    DLC_12,
-    DLC_16,
-    DLC_20,
-    DLC_24,
-    DLC_32,
-    DLC_48,
-    DLC_64,
-} CAN_DLC;
 
 
 // From can1.h
@@ -167,19 +138,6 @@ typedef enum {
 #define RX_FIFO_MSG_DATA                (8U)
 #define NUM_OF_RX_FIFO                  (1U)
 
-#define SID_LOW_WIDTH                   (8U)
-#define SID_HIGH_MASK                   (0x07U)
-#define EID_LOW_WIDTH                   (5U)
-#define EID_LOW_POSN                    (3U)
-#define EID_LOW_MASK                    (0xF8U)
-#define EID_MID_WIDTH                   (8U)
-#define EID_HIGH_WIDTH                  (5U)
-#define EID_HIGH_MASK                   (0x1FU)
-#define IDE_POSN                        (4U)
-#define RTR_POSN                        (5U)
-
-#define DLCToPayloadBytes(x)            (DLC_BYTES[(x)])
-#define PLSIZEToPayloadBytes(x)         (DLCToPayloadBytes(8u + (x)))
 
 struct CAN_FIFOREG {
     uint8_t CONL;
@@ -209,45 +167,73 @@ struct CAN1_RX_FIFO {
 };
 
 
-//CAN RX FIFO Message object data field 
-static uint8_t rxMsgData[RX_FIFO_MSG_DATA];
-
 static struct CAN1_RX_FIFO rxFifos[] ={
     {FIFO1, 0u}
 };
 
 static volatile struct CAN_FIFOREG * const FIFO = (struct CAN_FIFOREG *) &C1TXQCONL;
-static const uint8_t DLC_BYTES[] = {0U, 1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U};
+
+
+
+
+// extern
+#ifdef INCLUDE_CBUS_CAN_STATS
+volatile stats_t stats = {.bytes =
+    {[0 ... sizeof (stats.bytes) - 1] = 0}};
+#endif
 
 // Current standard ID
 bytes16_t curStdID;
 
 
-static void CAN1_RX_FIFO_ResetInfo(void) {
+static bool CAN1_OperationModeSet(const opMode_t requestMode) {
 
-    uint8_t index;
+    opMode_t opMode = C1CONUbits.OPMOD;
+    if (opMode == opModeConfiguration
+            || requestMode == opModeDisable
+            || requestMode == opModeConfiguration) {
 
-    for (index = 0; index < NUM_OF_RX_FIFO; index++) {
-        rxFifos[index].fifoHead = 0;
+        C1CONTbits.REQOP = requestMode;
+
+        while (requestMode != C1CONUbits.OPMOD) {
+            //This condition is avoiding the system error case endless loop
+            if (C1INTHbits.SERRIF) return false;
+        }
+    } else {
+        return false;
     }
+
+    return true;
 }
 
-static void CAN1_RX_FIFO_Configuration(void) {
+static void CAN1_Initialize(void) {
 
-    // TXEN disabled; RTREN disabled; RXTSEN disabled; TXATIE disabled; RXOVIE enabled; TFERFFIE disabled; TFHRFHIE disabled; TFNRFNIE disabled; 
-    C1FIFOCON1L = 0x08;
+    /* Enable the CAN module */
+    C1CONHbits.ON = 1;
 
-    // FRESET enabled; TXREQ disabled; UINC disabled; 
-    C1FIFOCON1H = 0x04;
+    if (!CAN1_OperationModeSet(opModeConfiguration)) return;
 
-    // TXAT Three retransmission attempts; TXPRI 1; 
-    C1FIFOCON1U = 0x20;
+    /* Initialize the C1FIFOBA with the start address of the CAN FIFO message object area. */
+    C1FIFOBA = CAN1_BUFFERS_BASE_ADDRESS;
 
-    // PLSIZE 8; FSIZE 12; 
-    C1FIFOCON1T = 0x0B;
-}
+    C1CONL = 0x60;  // CLKSEL0 disabled; PXEDIS enabled; ISOCRCEN enabled; DNCNT 0;
+    C1CONH = 0x97;  // ON enabled; FRZ disabled; SIDL disabled; BRSDIS enabled; WFT T11 Filter; WAKFIL enabled;
+    C1CONU = 0x10;  // TXQEN enabled; STEF disabled; SERR2LOM disabled; ESIGM disabled; RTXAT disabled;
 
-static void CAN1_RX_FIFO_FilterMaskConfiguration(void) {
+    C1NBTCFGL = 0x02;   // SJW 2;
+    C1NBTCFGH = 0x02;   // TSEG2 2;
+    C1NBTCFGU = 0x03;   // TSEG1 3;
+    C1NBTCFGT = 0x3F;   // BRP 63;
+
+    C1TXQCONL = 0x10;   // TXATIE enabled; TXQEIE disabled; TXQNIE disabled;
+    C1TXQCONH = 0x04;   // FRESET enabled; UINC disabled;
+    C1TXQCONU = 0x60;   // TXAT 3; TXPRI 1;
+    C1TXQCONT = 0x09;   // PLSIZE 8; FSIZE 10;
+
+    C1FIFOCON1L = 0x08; // TXEN disabled; RTREN disabled; RXTSEN disabled; TXATIE disabled; RXOVIE enabled; TFERFFIE disabled; TFHRFHIE disabled; TFNRFNIE disabled;
+    C1FIFOCON1H = 0x04; // FRESET enabled; TXREQ disabled; UINC disabled;
+    C1FIFOCON1U = 0x20; // TXAT Three retransmission attempts; TXPRI 1;
+    C1FIFOCON1T = 0x0B; // PLSIZE 8; FSIZE 12;
 
     C1FLTOBJ0L = 0x00;
     C1FLTOBJ0H = 0x00;
@@ -257,116 +243,23 @@ static void CAN1_RX_FIFO_FilterMaskConfiguration(void) {
     C1MASK0H = 0x00;
     C1MASK0U = 0x00;
     C1MASK0T = 0x40;    // MIDE set: filter on EXIDE
-    // FLTEN0 enabled; F0BP FIFO 1; 
-    C1FLTCON0L = 0x81;
-}
+    C1FLTCON0L = 0x81;  // FLTEN0 enabled; F0BP FIFO 1; 
 
-static void CAN1_TX_FIFO_Configuration(void) {
+    for (uint8_t index = 0; index < NUM_OF_RX_FIFO; index++) {
+        rxFifos[index].fifoHead = 0;
+    }
 
-    // TXATIE enabled; TXQEIE disabled; TXQNIE disabled; 
-    C1TXQCONL = 0x10;
-
-    // FRESET enabled; UINC disabled; 
-    C1TXQCONH = 0x04;
-
-    // TXAT 3; TXPRI 1; 
-    C1TXQCONU = 0x60;
-
-    // PLSIZE 8; FSIZE 10; 
-    C1TXQCONT = 0x09;
-}
-
-static void CAN1_BitRateConfiguration(void) {
-
-    // SJW 2; 
-    C1NBTCFGL = 0x02;
-
-    // TSEG2 2; 
-    C1NBTCFGH = 0x02;
-
-    // TSEG1 3; 
-    C1NBTCFGU = 0x03;
-
-    // BRP 63; 
-    C1NBTCFGT = 0x3F;
-
-}
-
-static void CAN1_ErrorNotificationInterruptEnable(void) {
-
+    IPR0bits.CANIP = 0;
     PIR0bits.CANIF = 0;
 
-    // MODIF disabled; TBCIF disabled; 
-    C1INTL = 0x00;
-
-    // IVMIF disabled; WAKIF disabled; CERRIF disabled; SERRIF disabled; 
-    C1INTH = 0x00;
-
-    // TEFIE disabled; MODIE enabled; TBCIE disabled; RXIE disabled; TXIE disabled; 
-    C1INTU = 0x08;
-
-    // IVMIE enabled; WAKIE enabled; CERRIE enabled; SERRIE enabled; RXOVIE enabled; TXATIE enabled; 
-    C1INTT = 0xFC;
+    C1INTL = 0x00;      // MODIF disabled; TBCIF disabled;
+    C1INTH = 0x00;      // IVMIF disabled; WAKIF disabled; CERRIF disabled; SERRIF disabled;
+    C1INTU = 0x08;      // TEFIE disabled; MODIE enabled; TBCIE disabled; RXIE disabled; TXIE disabled;
+    C1INTT = 0xFC;      // IVMIE enabled; WAKIE enabled; CERRIE enabled; SERRIE enabled; RXOVIE enabled; TXATIE enabled;
 
     PIE0bits.CANIE = 1;
-}
 
-static CAN_OP_MODES CAN1_OperationModeGet(void) {
-
-    return C1CONUbits.OPMOD;
-}
-
-static CAN_OP_MODE_STATUS CAN1_OperationModeSet(const CAN_OP_MODES requestMode) {
-
-    CAN_OP_MODE_STATUS status = CAN_OP_MODE_REQUEST_SUCCESS;
-    CAN_OP_MODES opMode = CAN1_OperationModeGet();
-
-    if (CAN_CONFIGURATION_MODE == opMode
-            || CAN_DISABLE_MODE == requestMode
-            || CAN_CONFIGURATION_MODE == requestMode) {
-        C1CONTbits.REQOP = requestMode;
-
-        while (C1CONUbits.OPMOD != requestMode) {
-            //This condition is avoiding the system error case endless loop
-            if (1 == C1INTHbits.SERRIF) {
-                status = CAN_OP_MODE_SYS_ERROR_OCCURED;
-                break;
-            }
-        }
-    } else {
-        status = CAN_OP_MODE_REQUEST_FAIL;
-    }
-
-    return status;
-}
-
-static void CAN1_Initialize(void) {
-
-    /* Enable the CAN module */
-    C1CONHbits.ON = 1;
-
-    if (CAN_OP_MODE_REQUEST_SUCCESS == CAN1_OperationModeSet(CAN_CONFIGURATION_MODE)) {
-
-        /* Initialize the C1FIFOBA with the start address of the CAN FIFO message object area. */
-        C1FIFOBA = CAN1_BUFFERS_BASE_ADDRESS;
-
-        // CLKSEL0 disabled; PXEDIS enabled; ISOCRCEN enabled; DNCNT 0; 
-        C1CONL = 0x60;
-
-        // ON enabled; FRZ disabled; SIDL disabled; BRSDIS enabled; WFT T11 Filter; WAKFIL enabled; 
-        C1CONH = 0x97;
-
-        // TXQEN enabled; STEF disabled; SERR2LOM disabled; ESIGM disabled; RTXAT disabled; 
-        C1CONU = 0x10;
-
-        CAN1_BitRateConfiguration();
-        CAN1_TX_FIFO_Configuration();
-        CAN1_RX_FIFO_Configuration();
-        CAN1_RX_FIFO_FilterMaskConfiguration();
-        CAN1_RX_FIFO_ResetInfo();
-        CAN1_ErrorNotificationInterruptEnable();
-        CAN1_OperationModeSet(CAN_NORMAL_2_0_MODE);
-    }
+    CAN1_OperationModeSet(opModeNormal);
 }
 
 static uint8_t GetRxFifoDepth(uint8_t validChannel) {
@@ -406,7 +299,7 @@ bool CAN1_Receive(canFrame_t* rxCanMsg)
         CAN1_RX_FIFO_CHANNELS channel = rxFifos[index].channel;
         CAN_RX_FIFO_STATUS rxMsgStatus = GetRxFifoStatus(channel);
 
-        if (CAN_RX_MSG_AVAILABLE == (rxMsgStatus & CAN_RX_MSG_AVAILABLE))
+        if ((rxMsgStatus & CAN_RX_MSG_AVAILABLE) == CAN_RX_MSG_AVAILABLE)
         {
             uint8_t* rxFifoObj = (uint8_t*) FIFO[channel].UA;
             
@@ -421,7 +314,7 @@ bool CAN1_Receive(canFrame_t* rxCanMsg)
                     rxFifos[index].fifoHead = 0;
                 }
 
-                if (CAN_RX_MSG_OVERFLOW == (rxMsgStatus & CAN_RX_MSG_OVERFLOW))
+                if ((rxMsgStatus & CAN_RX_MSG_OVERFLOW) == CAN_RX_MSG_OVERFLOW)
                 {
                     FIFO[channel].STAL &= ~_C1FIFOSTA1L_RXOVIF_MASK;
                 }
@@ -444,10 +337,10 @@ static uint8_t CAN1_ReceivedMessageCountGet(void) {
         CAN1_RX_FIFO_CHANNELS channel = rxFifos[index].channel;
         CAN_RX_FIFO_STATUS rxMsgStatus = GetRxFifoStatus(channel);
 
-        if (CAN_RX_MSG_AVAILABLE == (rxMsgStatus & CAN_RX_MSG_AVAILABLE)) {
+        if ((rxMsgStatus & CAN_RX_MSG_AVAILABLE) == CAN_RX_MSG_AVAILABLE) {
             uint8_t numOfMsg, fifoDepth = GetRxFifoDepth(channel);
 
-            if (CAN_RX_MSG_OVERFLOW == (rxMsgStatus & CAN_RX_MSG_OVERFLOW)) {
+            if ((rxMsgStatus & CAN_RX_MSG_OVERFLOW) == CAN_RX_MSG_OVERFLOW) {
                 numOfMsg = fifoDepth;
             } else {
                 uint8_t fifoTail = FIFO[channel].STAH & _C1FIFOSTA1H_FIFOCI_MASK;
@@ -493,7 +386,7 @@ static CAN_TX_MSG_REQUEST_STATUS ValidateTransmission(uint8_t validChannel) {
 
     CAN_TX_MSG_REQUEST_STATUS txMsgStatus = CAN_TX_MSG_REQUEST_SUCCESS;
 
-    if (CAN_TX_FIFO_FULL == GetTxFifoStatus(validChannel)) {
+    if (GetTxFifoStatus(validChannel) == CAN_TX_FIFO_FULL) {
         txMsgStatus |= CAN_TX_MSG_REQUEST_FIFO_FULL;
     }
 
@@ -506,7 +399,7 @@ static CAN_TX_MSG_REQUEST_STATUS CAN1_Transmit(const CAN1_TX_FIFO_CHANNELS fifoC
 
     if (isTxChannel(fifoChannel)) {
         status = ValidateTransmission(fifoChannel);
-        if (CAN_TX_MSG_REQUEST_SUCCESS == status) {
+        if (status == CAN_TX_MSG_REQUEST_SUCCESS) {
             uint8_t *txFifoObj = (uint8_t *) FIFO[fifoChannel].UA;
 
             if (txFifoObj != NULL) {
@@ -519,115 +412,6 @@ static CAN_TX_MSG_REQUEST_STATUS CAN1_Transmit(const CAN1_TX_FIFO_CHANNELS fifoC
     return status;
 }
 
-static CAN_TX_FIFO_STATUS CAN1_TransmitFIFOStatusGet(const CAN1_TX_FIFO_CHANNELS fifoChannel) {
-
-    CAN_TX_FIFO_STATUS status = CAN_TX_FIFO_FULL;
-
-    if (isTxChannel(fifoChannel)) {
-        status = GetTxFifoStatus(fifoChannel);
-    }
-
-    return status;
-}
-
-static bool CAN1_IsBusOff(void) {
-    return C1TRECUbits.TXBO;
-}
-
-static bool CAN1_IsRxErrorPassive(void) {
-    return C1TRECUbits.RXBP;
-}
-
-static bool CAN1_IsRxErrorWarning(void) {
-    return C1TRECUbits.RXWARN;
-}
-
-static bool CAN1_IsRxErrorActive(void) {
-    return !CAN1_IsRxErrorPassive();
-}
-
-static bool CAN1_IsTxErrorPassive(void) {
-    return C1TRECUbits.TXBP;
-}
-
-static bool CAN1_IsTxErrorWarning(void) {
-    return C1TRECUbits.TXWARN;
-}
-
-static bool CAN1_IsTxErrorActive(void) {
-    return !CAN1_IsTxErrorPassive();
-}
-
-static void CAN1_Sleep(void) {
-
-    C1INTHbits.WAKIF = 0;
-    C1INTTbits.WAKIE = 1;
-
-    CAN1_OperationModeSet(CAN_DISABLE_MODE);
-}
-
-void __interrupt(irq(CAN), base(IVT_BASE_ADDRESS), low_priority) CAN1_ISR(void) {
-
-    if (1 == C1INTHbits.IVMIF) {
-        //CAN1_InvalidMessageHandler();
-        C1INTHbits.IVMIF = 0;
-    }
-
-    if (1 == C1INTHbits.WAKIF) {
-        //CAN1_BusWakeUpActivityHandler();
-        C1INTHbits.WAKIF = 0;
-    }
-
-    if (1 == C1INTHbits.CERRIF) {
-        //CAN1_BusErrorHandler();
-        C1INTHbits.CERRIF = 0;
-    }
-
-    if (1 == C1INTLbits.MODIF) {
-        //CAN1_ModeChangeHandler();
-        C1INTLbits.MODIF = 0;
-    }
-
-    if (1 == C1INTHbits.SERRIF) {
-        //CAN1_SystemErrorHandler();
-        C1INTHbits.SERRIF = 0;
-    }
-
-    if (1 == C1INTHbits.TXATIF) {
-        //CAN1_TxAttemptHandler();
-        if (1 == C1TXQSTALbits.TXATIF) {
-            C1TXQSTALbits.TXATIF = 0;
-        }
-    }
-
-    if (1 == C1INTHbits.RXOVIF) {
-        //CAN1_RxBufferOverflowHandler();
-        if (1 == C1FIFOSTA1Lbits.RXOVIF) {
-            C1FIFOSTA1Lbits.RXOVIF = 0;
-        }
-    }
-
-    PIR0bits.CANIF = 0;
-}
-//
-//void __interrupt(irq(CANRX), base(IVT_BASE_ADDRESS), low_priority) CAN1_RXI_ISR(void) {
-//
-//    if (1 == C1FIFOSTA1Lbits.TFNRFNIF) {
-//        //CAN1_FIFO1NotEmptyHandler();
-//        // flag readonly
-//    }
-//
-//}
-//
-//void __interrupt(irq(CANTX), base(IVT_BASE_ADDRESS), low_priority) CAN1_TXI_ISR(void) {
-//
-//    if (1 == C1TXQSTALbits.TXQNIF) {
-//        //CAN1_TXQNotFullHandler();
-//        // flag readonly
-//    }
-//
-//}
-
 
 
 
@@ -635,12 +419,6 @@ void __interrupt(irq(CAN), base(IVT_BASE_ADDRESS), low_priority) CAN1_ISR(void) 
 
 
 
-
-// extern
-#ifdef INCLUDE_CBUS_CAN_STATS
-volatile stats_t stats = {.bytes =
-    {[0 ... sizeof (stats.bytes) - 1] = 0}};
-#endif
 
 /**
  * Initialises the CAN1 peripheral.
@@ -724,6 +502,51 @@ int8_t can1Receive(bool(* msgCheckFunc)(uint16_t stdID, uint8_t dataLen, volatil
 
 
 // <editor-fold defaultstate="expanded" desc="Interrupt service routines">
+
+
+void __interrupt(irq(CAN), base(IVT_BASE_ADDRESS), low_priority) CAN1_ISR(void) {
+
+    if (1 == C1INTHbits.IVMIF) {
+        //CAN1_InvalidMessageHandler();
+        C1INTHbits.IVMIF = 0;
+    }
+
+    if (1 == C1INTHbits.WAKIF) {
+        //CAN1_BusWakeUpActivityHandler();
+        C1INTHbits.WAKIF = 0;
+    }
+
+    if (1 == C1INTHbits.CERRIF) {
+        //CAN1_BusErrorHandler();
+        C1INTHbits.CERRIF = 0;
+    }
+
+    if (1 == C1INTLbits.MODIF) {
+        //CAN1_ModeChangeHandler();
+        C1INTLbits.MODIF = 0;
+    }
+
+    if (1 == C1INTHbits.SERRIF) {
+        //CAN1_SystemErrorHandler();
+        C1INTHbits.SERRIF = 0;
+    }
+
+    if (1 == C1INTHbits.TXATIF) {
+        //CAN1_TxAttemptHandler();
+        if (1 == C1TXQSTALbits.TXATIF) {
+            C1TXQSTALbits.TXATIF = 0;
+        }
+    }
+
+    if (1 == C1INTHbits.RXOVIF) {
+        //CAN1_RxBufferOverflowHandler();
+        if (1 == C1FIFOSTA1Lbits.RXOVIF) {
+            C1FIFOSTA1Lbits.RXOVIF = 0;
+        }
+    }
+
+    PIR0bits.CANIF = 0;
+}
 
 /**
  * Performs regular CAN1 operations (called every millisecond).
