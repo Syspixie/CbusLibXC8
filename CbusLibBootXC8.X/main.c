@@ -288,7 +288,7 @@ static void writeMemory(uint8_t nvmOp) {
 static void eraseFlash() {
 
     // Only erase on block boundary
-    if (buff.memAddr.valueL & (FLASH_BLOCK_SIZE - 1)) return;
+    if (buff.memAddr.valueL & (FLASH_PAGE_SIZE - 1)) return;
 
     // Set the erase address
     TBLPTR = buff.memAddr.value;

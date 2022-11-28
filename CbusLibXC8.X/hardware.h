@@ -113,6 +113,7 @@ typedef uint8_t flashPageOffset_t;
 #define CPU_ID P18F27Q83
 #define FLASH_TOP 0x01FFFF              // 128K bytes
 #define FLASH_PAGE_SIZE 256
+#define FLASH_PAGE_BUFFER_ADDRESS 0x3700
 #define EEPROM_TOP 0x03FF               // 1024 bytes
 typedef uint24_t flashAddr_t;
 typedef uint16_t flashPageOffset_t;

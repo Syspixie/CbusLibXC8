@@ -82,10 +82,17 @@ typedef union {
 } cacheStatus_t;
 
 
-uint8_t pageBuffer[FLASH_PAGE_SIZE];       // Cache
-flashAddr_t currentPage;                    // Currently cached memory page (on FLASH_PAGE_SIZE boundary)
-flashPageOffset_t pageOffset;                    // Current byte offset within currentPage
-cacheStatus_t cacheStatus;                  // Cache status flags
+#if defined(FLASH_PAGE_BUFFER_ADDRESS)
+// Use the designated page buffer as the cache
+uint8_t pageBuffer[FLASH_PAGE_SIZE] __at(FLASH_PAGE_BUFFER_ADDRESS);
+#else
+// Cache
+uint8_t pageBuffer[FLASH_PAGE_SIZE];
+#endif
+
+flashAddr_t currentPage;        // Currently cached memory page (on FLASH_PAGE_SIZE boundary)
+flashPageOffset_t pageOffset;   // Current byte offset within currentPage
+cacheStatus_t cacheStatus;      // Cache status flags
 
 
 /**
@@ -163,8 +170,8 @@ void readFlash(flashAddr_t addr, void* dst, size_t n) {
  */
 static void readPage() {
 
+#if defined(CPU_FAMILY_PIC18_K80)
     TBLPTR = currentPage;
-
     uint8_t* p = pageBuffer;
     flashPageOffset_t n = FLASH_PAGE_SIZE;
 
@@ -178,6 +185,33 @@ static void readPage() {
         asm("TBLRD");           // Last byte
         *p = TABLAT;
     }
+#endif
+#if defined(CPU_FAMILY_PIC18_K83)
+    TBLPTR = currentPage;
+    uint8_t* p = pageBuffer;
+    flashPageOffset_t n = FLASH_PAGE_SIZE;
+
+    // Populate the page buffer with the contents of the FLASH page
+    while (n > 1) {             // Read all but the last byte
+        asm("TBLRDPOSTINC");
+        *p++ = TABLAT;
+        --n;
+    }
+    if (n > 0) {
+        asm("TBLRD");           // Last byte
+        *p = TABLAT;
+    }
+#endif
+#if defined(CPU_FAMILY_PIC18_Q83Q84)
+    NVMADR = currentPage;
+    NVMCON1bits.NVMCMD = 0b010;
+
+    // Perform read
+    NVMCON0bits.GO = 1;
+
+    // Wait for read to complete
+    while (NVMCON0bits.GO);
+#endif
 }
 
 /**
@@ -187,8 +221,8 @@ static void readPage() {
  */
 static void writePage() {
 
+#if defined(CPU_FAMILY_PIC18_K80)
     TBLPTR = currentPage;
-
     uint8_t* p = pageBuffer;
     flashPageOffset_t n = FLASH_PAGE_SIZE;
 
@@ -201,9 +235,7 @@ static void writePage() {
     TABLAT = *p;                // Last byte
     asm("TBLWT");
 
-#if defined(CPU_FAMILY_PIC18_K80)
     // Set up write
-    TBLPTR = currentPage;
     EECON1 = 0b10000100;
 
     // Perform write with all interrupts temporarily disabled
@@ -217,8 +249,20 @@ static void writePage() {
     EECON1 = 0b00000000;
 #endif
 #if defined(CPU_FAMILY_PIC18_K83)
-    // Set up write
     TBLPTR = currentPage;
+    uint8_t* p = pageBuffer;
+    flashPageOffset_t n = FLASH_PAGE_SIZE;
+
+    // Populate the holding registers with the contents of the page buffer
+    while (n > 1) {             // Write all but the last byte
+        TABLAT = *p++;
+        asm("TBLWTPOSTINC");
+        --n;
+    }
+    TABLAT = *p;                // Last byte
+    asm("TBLWT");
+
+    // Set up write
     NVMCON1 = 0b10000100;
 
     // Perform write with all interrupts temporarily disabled
@@ -344,8 +388,7 @@ static void flushCache() {
  * 
  * @pre cacheStatus set.
  * @param FLASH address to be loaded.
- * @post currentPage set.
- * @post pageOffset set.
+ * @post currentPage and pageOffset set.
  * @post cacheStatus updated.
  */
 static void loadPage(flashAddr_t addr) {
@@ -375,8 +418,7 @@ static void loadPage(flashAddr_t addr) {
  * 
  * @pre currentPage set.
  * @pre cacheStatus set.
- * @post currentPage updated.
- * @post pageOffset set.
+ * @post currentPage and pageOffset updated.
  * @post cacheStatus updated.
  */
 static void loadNextPage() {
@@ -397,11 +439,9 @@ static void loadNextPage() {
 /**
  * Reads a byte from the current cache location.
  * 
- * @pre currentPage set.
- * @pre pageOffset set.
+ * @pre currentPage and pageOffset set.
  * @pre cacheStatus set.
- * @post currentPage possibly updated.
- * @post pageOffset updated.
+ * @post currentPage and pageOffset updated.
  * @post cacheStatus updated.
  */
 static uint8_t readCache() {
@@ -417,11 +457,9 @@ static uint8_t readCache() {
 /**
  * Writes a byte to the current cache location.
  * 
- * @pre currentPage set.
- * @pre pageOffset set.
+ * @pre currentPage and pageOffset set.
  * @pre cacheStatus set.
- * @post currentPage possibly updated.
- * @post pageOffset updated.
+ * @post currentPage and pageOffset updated.
  * @post cacheStatus updated.
  */
 static void writeCache(uint8_t data) {
