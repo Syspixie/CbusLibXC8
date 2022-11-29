@@ -80,19 +80,16 @@
 #if defined(CAN1_BUFFERS_BASE_ADDRESS)
 
 
-typedef struct {
-    uint16_t stdID;
-    union {
-        struct {
-            unsigned DLC : 4;
-            unsigned IDE : 1;
-            unsigned RTR : 1;
-            unsigned BRS : 1;   // CAN FD only
-            unsigned FDF : 1;   // CAN FD only
-        } dlcBits;
-        uint8_t dlc;
+typedef union {
+    struct {
+        unsigned DLC : 4;
+        unsigned IDE : 1;
+        unsigned RTR : 1;
+        unsigned BRS : 1;   // CAN FD only
+        unsigned FDF : 1;   // CAN FD only
     };
-} canFrame_t;
+    uint8_t value;
+} can1Dlc_t;
 
 typedef enum {
     opModeNormalFD = 0,         //CAN FD only
@@ -129,62 +126,6 @@ static bool setOperationMode(const opMode_t requestMode) {
         //This condition is avoiding the system error case endless loop
         if (C1INTHbits.SERRIF) return false;
     }
-
-    return true;
-}
-
-static bool receiveMessage(canFrame_t* rxCanMsg, uint8_t* data) {
-
-    // Done if nothing in FIFO
-    if (!(C1FIFOSTA1L & _C1FIFOSTA1L_TFNRFNIF_MASK)) return false;
-
-    // Pointer to FIFO entry
-    uint8_t* rxFifoObj = (uint8_t*) C1FIFOUA1;
-
-    // Get ID
-    bytes16_t v;
-    v.valueL = rxFifoObj[0];
-    v.valueH = rxFifoObj[1] & 0b00000111;
-    rxCanMsg->stdID = v.value;
-
-    // Get DLC
-    rxCanMsg->dlc = rxFifoObj[4];
-    uint8_t len = rxCanMsg->dlcBits.DLC;
-    if (len > 8) {
-        len = 8;
-        rxCanMsg->dlcBits.DLC = len;
-    }
-
-    // Get Data
-    utilMemcpy(data, &rxFifoObj[8], len);
-
-    // Increment FIFO; clear any overflow flag
-    C1FIFOCON1H |= _C1FIFOCON1H_UINC_MASK;
-    C1FIFOSTA1L &= ~_C1FIFOSTA1L_RXOVIF_MASK;
-
-    return true;
-}
-
-static bool transmitMessage(canFrame_t* txCanMsg, uint8_t* data) {
-
-    // Done if FIFO full
-    if (!(C1TXQSTAL & _C1TXQSTAL_TXQNIF_MASK)) return false;
-
-    // Pointer to FIFO entry
-    uint8_t* txFifoObj = (uint8_t*) C1TXQUA;
-
-    // Put ID
-    txFifoObj[0] = ((bytes16_t) txCanMsg->stdID).valueL;
-    txFifoObj[1] = ((bytes16_t) txCanMsg->stdID).valueH;
-
-    // Put DLC
-    txFifoObj[4] = txCanMsg->dlc;
-
-    // Put data
-    utilMemcpy(&txFifoObj[8], data, txCanMsg->dlcBits.DLC);
-
-    // Request transmission; increment FIFO
-    C1TXQCONH |= (_C1TXQCONH_TXREQ_MASK | _C1TXQCONH_UINC_MASK);
 
     return true;
 }
@@ -254,15 +195,38 @@ void can1SetID(uint16_t stdID) {
     curStdID.value = stdID;
 }
 
+static bool transmitMessage(bytes16_t stdID, bool isRtr, uint8_t dataLen, uint8_t* data) {
+
+    // Done if FIFO full
+    if (!(C1TXQSTAL & _C1TXQSTAL_TXQNIF_MASK)) return false;
+
+    // Pointer to FIFO entry
+    uint8_t* txFifoObj = (uint8_t*) C1TXQUA;
+
+    // Put ID
+    txFifoObj[0] = stdID.valueL;
+    txFifoObj[1] = stdID.valueH;
+
+    // Put DLC
+    can1Dlc_t dlc = {.value = dataLen};
+    dlc.RTR = isRtr;
+    txFifoObj[4] = dlc.value;
+
+    // Put data
+    utilMemcpy(&txFifoObj[8], data, dataLen);
+
+    // Request transmission; increment FIFO
+    C1TXQCONH |= (_C1TXQCONH_TXREQ_MASK | _C1TXQCONH_UINC_MASK);
+
+    return true;
+}
+
 /**
  * Sends an RTR request.
  */
 void can1SendRtrRequest() {
 
-    canFrame_t msg;
-    msg.stdID = curStdID.value;
-    msg.dlc = 0b00100000;
-    transmitMessage(&msg, NULL);
+    transmitMessage(curStdID, true, 0, NULL);
 }
 
 /**
@@ -270,10 +234,7 @@ void can1SendRtrRequest() {
  */
 void can1SendRtrResponse() {
 
-    canFrame_t msg;
-    msg.stdID = curStdID.value;
-    msg.dlc = 0;
-    transmitMessage(&msg, NULL);
+    transmitMessage(curStdID, false, 0, NULL);
 }
 
 /**
@@ -283,34 +244,55 @@ void can1SendRtrResponse() {
  */
 void can1Transmit() {
 
-    canFrame_t msg;
-    msg.stdID = curStdID.value;
-    msg.dlc = (cbusMsg[0] >> 5) + 1;
-    transmitMessage(&msg, cbusMsg);
+    transmitMessage(curStdID, false, (cbusMsg[0] >> 5) + 1, cbusMsg);
 }
 
 /**
  * Receives a message.
  * 
- * @param msgCheckFunc function to pre-process message and check for CBUS message
- * @return -1: no message; 0: not a CBUS message; 1: is a CBUS message
- * @post cbusMsg[] CBUS message
+ * @param stdID pointer to returned standard ID
+ * @param isRTL pointer to flag indicating RTR
+ * @param dataLen pointer to returned data length
+ * @return true if valid message received
+ * @post message in cbusMsg[]
  */
-int8_t can1Receive(bool(* msgCheckFunc)(uint16_t stdID, uint8_t dataLen, volatile uint8_t* data)) {
+bool can1Receive(bytes16_t* stdID, bool* isRtr, uint8_t* dataLen) {
 
-    // Get message; done if none
-    canFrame_t msg;
-    uint8_t data[8];
-    if (!receiveMessage(&msg, data)) return -1;
+    // Done if nothing in FIFO
+    if (!(C1FIFOSTA1L & _C1FIFOSTA1L_TFNRFNIF_MASK)) return false;
+
+    // Pointer to FIFO entry
+    uint8_t* rxFifoObj = (uint8_t*) C1FIFOUA1;
+
+    can1Dlc_t dlc = {.value = rxFifoObj[4]};
+    bool ok = true;
 
     // Check for things we can't handle (should never happen if hardware config OK)
-    if (msg.dlc & 0b11010000) return -1;
+    if (dlc.IDE || dlc.BRS || dlc.FDF) {
+        ok = false;
+    } else {
 
-    // Callback check for CBUS message
-    bool haveMsg = msgCheckFunc((uint16_t) msg.stdID,
-            msg.dlcBits.DLC, (msg.dlcBits.RTR) ? NULL : data);
+        // Get stdID
+        stdID->valueL = rxFifoObj[0];
+        stdID->valueH = rxFifoObj[1] & 0b00000111;
 
-    return haveMsg ? 1 : 0;
+        // Get isRtr
+        *isRtr = dlc.RTR;
+
+        // Get dataLen
+        uint8_t len = dlc.DLC;
+        if (len > 8) len = 8;
+        *dataLen = len;
+
+        // Get Data
+        utilMemcpy(cbusMsg, &rxFifoObj[8], len);
+    }
+
+    // Increment FIFO; clear any overflow flag
+    C1FIFOCON1H |= _C1FIFOCON1H_UINC_MASK;
+    C1FIFOSTA1L &= ~_C1FIFOSTA1L_RXOVIF_MASK;
+
+    return ok;
 }
 
 

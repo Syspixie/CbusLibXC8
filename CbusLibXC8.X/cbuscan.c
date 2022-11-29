@@ -222,18 +222,22 @@ static void queueTransmit(int8_t tx) {
 }
 
 /**
- * Checks for a CBUS message; handles self-enumeration messages.
+ * Checks for an incoming message.  If one has been received, it is processed
+ * and, if required, a response is sent as an outgoing message.
  * 
- * @param id message CAN ID
- * @param dataLen number of bytes in message
- * @param data message data, or NULL if RTR
- * @return true if CBUS message found
- * @post cbusMsg[] CBUS message
+ * @return true if message received and processed.
  */
-static bool preProcessMessage(uint16_t stdID, uint8_t dataLen, volatile uint8_t* data) {
+bool receiveCbusCan() {
+
+    static bytes16_t stdID;
+    static bool isRtr;
+    static uint8_t dataLen;
+
+    // Receive message
+    if (!canReceive(&stdID, &isRtr, &dataLen)) return false;
 
     // Clear upper (priority) bits from CAN ID
-    uint8_t id = stdID & CAN_BUS_ID_UPPER_BITS_MASK;
+    uint8_t id = stdID.value & CAN_BUS_ID_UPPER_BITS_MASK;
 
     // If received CAN ID is the same as ours...
     if (canBusID > 0 && id == canBusID && selfEnumStatus == selfEnumIsInactive) {
@@ -242,12 +246,12 @@ static bool preProcessMessage(uint16_t stdID, uint8_t dataLen, volatile uint8_t*
         selfEnumStatus = selfEnumIsPending;
         selfEnumStartedMillis = getMillisShort();
 
-        // Ignore, even if a CBUS message
-        return false;
+        // Finished
+        return true;
     }
 
     // If RTR...
-    if (!data) {
+    if (isRtr) {
 
         // Zero data RTR...
         if (dataLen == 0) {
@@ -261,8 +265,8 @@ static bool preProcessMessage(uint16_t stdID, uint8_t dataLen, volatile uint8_t*
             if (selfEnumStatus == selfEnumIsPending) selfEnumStartedMillis = getMillisShort();
         }
 
-        // Not a CBUS message
-        return false;
+        // Finished
+        return true;
     }
 
     // If zero data, must be response to our RTR...
@@ -271,39 +275,16 @@ static bool preProcessMessage(uint16_t stdID, uint8_t dataLen, volatile uint8_t*
         // Set bitmap bit corresponding to received CAN ID
         selfEnumBitmap[id >> 3] |= 1 << (id & 0b00000111);
 
-        // Not a CBUS message
-        return false;
+        // Finished
+        return true;
     }
 
-    // We have a CBUS message; copy data
-    utilMemcpy(cbusMsg, data, dataLen);
+    // This is a CBUS message - process it
+    int8_t tx = processCbusMessage();
 
-    return true;
-}
+    // Send response if there is one
+    if (tx) queueTransmit(tx);
 
-/**
- * Checks for an incoming message.  If one has been received, it is processed
- * and, if required, a response is sent as an outgoing message.
- * 
- * @return true if message received and processed.
- */
-bool receiveCbusCan() {
-
-    // Check for messages; if none, we're done
-    int8_t ret = canReceive(preProcessMessage);
-    if (ret < 0) return false;
-
-    // If received a CBUS message...
-    if (ret > 0) {
-
-        // Process the message
-        int8_t tx = processCbusMessage();
-
-        // Send response if there is one
-        if (tx) queueTransmit(tx);
-    }
-
-    // Message received and understood
     return true;
 }
 

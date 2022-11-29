@@ -109,16 +109,18 @@
 #define TX_TIMEOUT_MILLIS 1000          // 1 second
 
 
-typedef struct {
-    uint16_t stdID;    // Standard ID (used for receive only)
-    union {
-        struct {
-            unsigned DLC : 4;
-            unsigned reserved : 2;
-            unsigned RTR : 1;
-        } dlcBits;
-        uint8_t dlc;
+typedef union {
+    struct {
+        unsigned DLC : 4;
+        unsigned reserved : 2;
+        unsigned RTR : 1;
     };
+    uint8_t value;
+} ecanDlc_t;
+
+typedef struct {
+    bytes16_t sid;      // Used for receive only
+    ecanDlc_t dlc;
     uint8_t data[8];
 } canFrame_t;
 
@@ -365,7 +367,7 @@ void ecanTransmit() {
 
         // Copy data
         uint8_t dataLen = (cbusMsg[0] >> 5) + 1;
-        txFifo[idx].dlc = dataLen;
+        txFifo[idx].dlc.value = dataLen;
         utilMemcpy(txFifo[idx].data, cbusMsg, dataLen);
 
         // Update FIFO
@@ -386,21 +388,42 @@ void ecanTransmit() {
 /**
  * Receives a message.
  * 
- * @param msgCheckFunc function to pre-process message and check for CBUS message
- * @return -1: no message; 0: not a CBUS message; 1: is a CBUS message
- * @post cbusMsg[] CBUS message
+ * @param stdID pointer to returned standard ID
+ * @param isRTL pointer to flag indicating RTR
+ * @param dataLen pointer to returned data length
+ * @return true if valid message received
+ * @post message in cbusMsg[]
  */
-int8_t ecanReceive(bool (* msgCheckFunc)(uint16_t stdID, uint8_t dataLen, volatile uint8_t* data)) {
+bool ecanReceive(bytes16_t* stdID, bool* isRtr, uint8_t* dataLen) {
 
-    // If no messages, we're done
-    if (RX_FIFO_CUR_LENGTH == 0) return -1;
+    // Done if nothing in FIFO
+    if (RX_FIFO_CUR_LENGTH == 0) return false;
 
     // FIFO index
     uint8_t idx = rxFifoOldest % RX_FIFO_LENGTH;
 
-    // Check for CBUS message
-    volatile uint8_t* data = (rxFifo[idx].dlcBits.RTR) ? NULL : rxFifo[idx].data;
-    bool haveMsg = msgCheckFunc(rxFifo[idx].stdID, rxFifo[idx].dlcBits.DLC, data);
+    ecanDlc_t dlc = rxFifo[idx].dlc;
+    bool ok = true;
+
+    // Check for things we can't handle (should never happen if hardware config OK)
+    if (rxFifo[idx].sid.valueL & 0b00001000) {
+        ok = false;
+    } else {
+
+        // Get stdID
+        (*stdID).value = rxFifo[idx].sid.value >> 5;
+
+        // Get isRtr
+        *isRtr = dlc.RTR;
+
+        // Get dataLen
+        uint8_t len = dlc.DLC;
+        if (len > 8) len = 8;
+        *dataLen = len;
+
+        // Get Data
+        utilMemcpy(cbusMsg, rxFifo[idx].data, len);
+    }
 
     // Update FIFO
     ++rxFifoOldest;
@@ -408,7 +431,7 @@ int8_t ecanReceive(bool (* msgCheckFunc)(uint16_t stdID, uint8_t dataLen, volati
     --stats.rxFifoUsed;
 #endif
 
-    return haveMsg ? 1 : 0;
+    return ok;
 }
 
 
@@ -449,7 +472,7 @@ static void txb0NextIsr() {
     ewin.SIDL = encodedCurStdID.valueL;
 
     // Copy data into buffer
-    ewin.DLC = txFifo[idx].dlc;
+    ewin.DLC = txFifo[idx].dlc.value;
     utilMemcpy(ewin.data, txFifo[idx].data, ewin.DLCbits.DLC);
 
     // Update FIFO
@@ -473,14 +496,12 @@ static void rxNextIsr() {
     // FIFO index
     uint8_t idx = rxFifoNewest % RX_FIFO_LENGTH;
 
-    // Decode standard ID from buffer
-    bytes16_t v;
-    v.valueL = ewin.SIDL;
-    v.valueH = ewin.SIDH;
-    rxFifo[idx].stdID = (v.value >> 5);
+    // Copy standard ID from buffer
+    rxFifo[idx].sid.valueL = ewin.SIDL;
+    rxFifo[idx].sid.valueH = ewin.SIDH;
 
     // Copy data from buffer
-    rxFifo[idx].dlc = ewin.DLC;
+    rxFifo[idx].dlc.value = ewin.DLC;
     utilMemcpy(rxFifo[idx].data, ewin.data, ewin.DLCbits.DLC);
 
     // Update FIFO

@@ -80,7 +80,7 @@ extern "C" {
     void can1SendRtrRequest(void);
     void can1SendRtrResponse(void);
     void can1Transmit(void);
-    int8_t can1Receive(bool (* msgCheckFunc)(uint16_t stdID, uint8_t dataLen, volatile uint8_t* data));
+    bool can1Receive(bytes16_t* stdID, bool* isRtr, uint8_t* dataLen);
     void can1TimerIsr(void);
 
 
