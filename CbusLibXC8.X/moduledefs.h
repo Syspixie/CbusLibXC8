@@ -85,9 +85,9 @@ extern "C" {
 //#define INCLUDE_CBUS_CAN_STATS
 
 
-#define MAJOR_VERSION 1
+#define MAJOR_VERSION 2
 #define MINOR_VERSION 'a'
-#define BETA_VERSION 0                  // 0: production
+#define BETA_VERSION 1                  // 0: production
 
 #define CURRENT_EEPROM_VERSION 1
 #define CURRENT_FLASH_VERSION 1

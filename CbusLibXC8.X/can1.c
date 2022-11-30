@@ -113,23 +113,6 @@ volatile stats_t stats = {.bytes =
 bytes16_t curStdID;
 
 
-static bool setOperationMode(const opMode_t requestMode) {
-
-    opMode_t opMode = C1CONUbits.OPMOD;
-    if (!(opMode == opModeConfiguration
-            || requestMode == opModeDisable
-            || requestMode == opModeConfiguration)) return false;
-
-    C1CONTbits.REQOP = requestMode;
-
-    while (C1CONUbits.OPMOD != requestMode) {
-        //This condition is avoiding the system error case endless loop
-        if (C1INTHbits.SERRIF) return false;
-    }
-
-    return true;
-}
-
 /**
  * Initialises the CAN1 peripheral.
  */
@@ -138,7 +121,8 @@ void initCan1() {
     /* Enable the CAN module */
     C1CONHbits.ON = 1;
 
-    if (!setOperationMode(opModeConfiguration)) return;
+    C1CONTbits.REQOP = 0b100;
+    while (C1CONUbits.OPMOD != 0b100);  // Wait for Configuration mode
 
     /* Initialize the C1FIFOBA with the start address of the CAN FIFO message object area. */
     C1FIFOBA = CAN1_BUFFERS_BASE_ADDRESS;
@@ -162,14 +146,14 @@ void initCan1() {
     C1FIFOCON1U = 0x20; // TXAT Three retransmission attempts; TXPRI 1;
     C1FIFOCON1T = 0x0B; // PLSIZE 8; FSIZE 12;
 
-    C1FLTOBJ0L = 0x00;
-    C1FLTOBJ0H = 0x00;
-    C1FLTOBJ0U = 0x00;
-    C1FLTOBJ0T = 0x00;  // EXIDE clear: allow standard ID only
-    C1MASK0L = 0x00;
-    C1MASK0H = 0x00;
-    C1MASK0U = 0x00;
-    C1MASK0T = 0x40;    // MIDE set: filter on EXIDE
+    C1FLTOBJ0L = 0b00000000;
+    C1FLTOBJ0H = 0b00000000;
+    C1FLTOBJ0U = 0b00000000;
+    C1FLTOBJ0T = 0b00000000;    // EXIDE clear: allow standard ID only
+    C1MASK0L = 0b00000000;
+    C1MASK0H = 0b00000000;
+    C1MASK0U = 0b00000000;
+    C1MASK0T = 0b01000000;      // MIDE set: filter on EXIDE
     C1FLTCON0L = 0x81;  // FLTEN0 enabled; F0BP FIFO 1; 
 
     IPR0bits.CANIP = 0;
@@ -182,7 +166,8 @@ void initCan1() {
 
     PIE0bits.CANIE = 1;
 
-    setOperationMode(opModeNormal);
+    C1CONTbits.REQOP = 0b110;
+    while (C1CONUbits.OPMOD != 0b110);  // Wait for Normal 2.0 mode
 }
 
 /**

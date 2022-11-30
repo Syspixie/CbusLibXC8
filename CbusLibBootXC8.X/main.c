@@ -82,11 +82,11 @@
 #define NVM_READ_EEPROM 0b00000000
 #define NVM_WRITE_EEPROM 0b00000100
 #define NVM_WRITE_CONFIG 0b01000100
-#define NVM_WRITE_FLASH 0b10000100
-#define NVM_ERASE_FLASH 0b10010100
+#define NVM_WRITE_FLASH_PAGE 0b10000100
+#define NVM_ERASE_FLASH_PAGE 0b10010100
 #define NVMADRL EEADR
 #define NVMADRH EEADRH
-#define NVMDAT EEDATA
+#define NVMDATL EEDATA
 #endif
 #if defined(CPU_FAMILY_PIC18_K83)
 #define CONFIG_UPPER_BYTE 0x30
@@ -94,18 +94,30 @@
 #define NVM_READ_EEPROM 0b00000000
 #define NVM_WRITE_EEPROM 0b00000100
 #define NVM_WRITE_CONFIG 0b01000100
-#define NVM_WRITE_FLASH 0b10000100
-#define NVM_ERASE_FLASH 0b10010100
+#define NVM_WRITE_FLASH_PAGE 0b10000100
+#define NVM_ERASE_FLASH_PAGE 0b10010100
+#define NVMDATL NVMDAT
 #endif
 #if defined(CPU_FAMILY_PIC18_Q83Q84)
 #define CONFIG_UPPER_BYTE 0x30
 #define EEPROM_UPPER_BYTE 0x38
 #define NVM_READ_EEPROM 0b000
+#define NVM_READ_EEPROM_POSTINC 0b001
 #define NVM_WRITE_EEPROM 0b011
+#define NVM_WRITE_EEPROM_POSTINC 0b100
+#define NVM_READ_CONFIG 0b000
+#define NVM_READ_CONFIG_POSTINC 0b001
 #define NVM_WRITE_CONFIG 0b011
-#define NVM_WRITE_FLASH 0b101
-#define NVM_ERASE_FLASH 0b110
+#define NVM_WRITE_CONFIG_POSTINC 0b100
+#define NVM_READ_FLASH 0b000
+#define NVM_READ_FLASH_POSTINC 0b001
+#define NVM_READ_FLASH_PAGE 0b010
+#define NVM_WRITE_FLASH 0b011
+#define NVM_WRITE_FLASH_POSTINC 0b100
+#define NVM_WRITE_FLASH_PAGE 0b101
+#define NVM_ERASE_FLASH_PAGE 0b110
 #endif
+
 
 // Status flags
 typedef union {
@@ -166,11 +178,11 @@ __EEPROM_DATA(0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00);
 volatile buff_t rxBuff __at(ECAN_BUFFERS_BASE_ADDRESS + 6);  // RXB0 D0-D7
 #endif
 #if defined(CAN1_BUFFERS_BASE_ADDRESS)
-// ToDo
-volatile buff_t rxBuff __at(CAN1_BUFFERS_BASE_ADDRESS);
+// CAN1_BUFFERS_BASE_ADDRESS is the address of TXQ; FIFO1 is next one up...
+volatile buff_t rxBuff __at(CAN1_BUFFERS_BASE_ADDRESS + 24);
 #endif
 
-buff_t buff;                        // Copy of RXB0 D0-D7
+buff_t buff;                        // Copy of CAN data D0-D7
 uint8_t buffLen;                    // # bytes sent
 
 bytes16_t checksum;                 // Programmed data checksum
@@ -178,16 +190,17 @@ status_t status;                    // Status flags
 
 
 /**
- * Reads an EEPROM location.
+ * Performs a memory read operation.
  * 
- * @pre NVMADR set.
- * @return Byte read.
+ * @pre Appropriate address registers set.
+ * @param nvmOp Operation to be performed.
+ * @post Data in latch or holding registers.
  */
-static uint8_t readEeprom() {
+static void readMemory(uint8_t nvmOp) {
 
 #if defined(CPU_FAMILY_PIC18_K80)
     // Set up read
-    EECON1 = NVM_READ_EEPROM;
+    EECON1 = nvmOp;
 
     // Initiate read
     EECON1bits.RD = 1;
@@ -195,44 +208,35 @@ static uint8_t readEeprom() {
     // Wait for read to complete
     NOP();
     NOP();
-    
-    return EEDATA;
 #endif
 #if defined(CPU_FAMILY_PIC18_K83)
     // Set up read
-    NVMCON1 = NVM_READ_EEPROM;
+    NVMCON1 = nvmOp;
 
     // Initiate read
     NVMCON1bits.RD = 1;
-    
-    return NVMDAT;
 #endif
 #if defined(CPU_FAMILY_PIC18_Q83Q84)
     // Set up read
-    NVMADRU = 0x38;
-    NVMCON1bits.NVMCMD = NVM_READ_EEPROM;
+    NVMCON1bits.NVMCMD = nvmOp;
 
     // Initiate read
     NVMCON0bits.GO = 1;
-    
-    return NVMDATL;
+
+    // Wait for read to complete
+    while (NVMCON0bits.GO);
 #endif
 }
 
 /**
- * Performs memory write operation.
+ * Performs a memory write or erase operation.
  * 
- * @pre Data written to holding registers and appropriate address registers set
+ * @pre Appropriate address registers set.
+ * @pre Data in latch or holding registers.
  * @param nvmOp Operation to be performed.
  * 
- * @note The routine waits for the completion of the operation - which can be
- * between 2 and 4 milliseconds.
- * 
- * Called to perform a memory operation - one of:
- *      NVM_WRITE_EEPROM - write a single byte to EEPROM
- *      NVM_WRITE_CONFIG - write a single byte to configuration area
- *      NVM_WRITE_FLASH - write a block to FLASH
- *      NVM_ERASE_FLASH - erase a block of FLASH
+ * @note The routine waits for the completion of the operation, which can be
+ * up to 11 milliseconds.
  */
 static void writeMemory(uint8_t nvmOp) {
 
@@ -288,13 +292,18 @@ static void writeMemory(uint8_t nvmOp) {
 static void eraseFlash() {
 
     // Only erase on block boundary
-    if (buff.memAddr.valueL & (FLASH_PAGE_SIZE - 1)) return;
+    if (buff.memAddr.value & (FLASH_PAGE_SIZE - 1)) return;
 
     // Set the erase address
+#if defined(CPU_FAMILY_PIC18_K80) | defined(CPU_FAMILY_PIC18_K83)
     TBLPTR = buff.memAddr.value;
+#endif
+#if defined(CPU_FAMILY_PIC18_Q83Q84)
+    NVMADR = buff.memAddr.value;
+#endif
 
     // Erase FLASH
-    writeMemory(NVM_ERASE_FLASH);
+    writeMemory(NVM_ERASE_FLASH_PAGE);
 }
 
 /**
@@ -318,6 +327,7 @@ static void writeFlash() {
     if (buffLen != 8) return;
     if (buff.memAddr.valueL & 0b00000111) return;
 
+#if defined(CPU_FAMILY_PIC18_K80) | defined(CPU_FAMILY_PIC18_K83)
     // Set the write address
     TBLPTR = buff.memAddr.value;
 
@@ -337,7 +347,32 @@ static void writeFlash() {
     TBLPTR -= 8;
 
     // Perform write from holding registers to FLASH
-    writeMemory(NVM_WRITE_FLASH);
+    writeMemory(NVM_WRITE_FLASH_PAGE);
+#endif
+#if defined(CPU_FAMILY_PIC18_Q83Q84)
+    // Set the write address
+    NVMADR = buff.memAddr.value;
+
+    // Working with words, not bytes: increment by 2
+    for (uint8_t i = 0; i < 8; i += 2) {
+
+        // Get byte, and add its value to the checksum
+        uint8_t b = rxBuff.bytes[i];
+        checksum.value += b;
+        NVMDATL = b;
+
+        // Ditto next byte
+        b = rxBuff.bytes[i + 1];
+        checksum.value += b;
+        NVMDATH = b;
+
+        // Write word to FLASH
+        writeMemory(NVM_WRITE_FLASH_POSTINC);
+    }
+
+    // Get ready for verify read
+    TBLPTR = buff.memAddr.value;
+#endif
 
     for (uint8_t i = 0; i < 8; ++i) {
 
@@ -359,6 +394,7 @@ static void writeFlash() {
  */
 static void writeConfig() {
 
+#if defined(CPU_FAMILY_PIC18_K80) | defined(CPU_FAMILY_PIC18_K83)
     // Set the write address
     TBLPTR = buff.memAddr.value;
 
@@ -382,6 +418,29 @@ static void writeConfig() {
         if (TABLAT != b) status.verifyError = 1;
 #endif //VERIFY_CONFIG_WRITE
     }
+#endif
+#if defined(CPU_FAMILY_PIC18_Q83Q84)
+    // Set the write address
+    NVMADR = buff.memAddr.value;
+
+    for (uint8_t i = 0; i < buffLen; ++i) {
+
+        // Get byte, and add its value to the checksum
+        uint8_t b = rxBuff.bytes[i];
+        checksum.value += b;
+        NVMDATL = b;
+
+        // Write byte to configuration
+        writeMemory(NVM_WRITE_CONFIG);
+
+        // Read and verify byte (read must always be done to increment address;
+        // verify is optional because not all configuration bits are read/write)
+        readMemory(NVM_READ_CONFIG_POSTINC);
+#ifdef VERIFY_CONFIG_WRITE
+        if (TABLAT != b) status.verifyError = 1;
+#endif //VERIFY_CONFIG_WRITE
+    }
+#endif
 }
 
 /**
@@ -408,13 +467,14 @@ static void writeEeprom() {
         // Get byte, and add its value to the checksum
         uint8_t b = rxBuff.bytes[i];
         checksum.value += b;
+        NVMDATL = b;
 
-        // Perform write to EEPROM
-        NVMDAT = b;
+        // Write byte to EEPROM
         writeMemory(NVM_WRITE_EEPROM);
 
         // Read and verify byte
-        if (readEeprom() != b) status.verifyError = 1;
+        readMemory(NVM_READ_EEPROM);
+        if (NVMDATL != b) status.verifyError = 1;
 
         // Move to next address
         if (++NVMADRL == 0) ++NVMADRH;
@@ -453,7 +513,7 @@ static void startApplication() {
 
     LATB = 0x00;            // LEDs off
 
-    // Set up address of bootloader flag
+    // Set up address of bootloader flag in EEPROM
     NVMADRL = EEPROM_BOOT_FLAG & 0xFF;
     NVMADRH = EEPROM_BOOT_FLAG >> 8;
 #if defined(CPU_FAMILY_PIC18_Q83Q84)
@@ -461,7 +521,7 @@ static void startApplication() {
 #endif
 
     // Clear bootloader flag
-    NVMDAT = 0x00;
+    NVMDATL = 0x00;
     writeMemory(NVM_WRITE_EEPROM);
 
     RESET();    // MCU reset
@@ -480,7 +540,8 @@ void main() __at(0x0020) {
 #endif
 
     // If bootloader flag is not set jump to application start
-    if (readEeprom() != 0xFF) {
+    readMemory(NVM_READ_EEPROM);
+    if (NVMDATL != 0xFF) {
         asm("GOTO " ___mkstr(APPLICATION_BASE_ADDRESS));
     }
 
@@ -491,7 +552,8 @@ void main() __at(0x0020) {
     CANRXPPS = 0x0B;    //RB3->ECAN:CANRX;    
 #endif
 #if defined(CPU_FAMILY_PIC18_Q83Q84)
-    // ToDo
+    RB2PPS = 0x46;      //RB2->CAN1:CANTX;
+    CANRXPPS = 0x0B;    //RB3->CAN1:CANRX;
 #endif
 
     LATA = 0x00;
@@ -524,7 +586,19 @@ void main() __at(0x0020) {
     WPUE = 0b00000000;
 #endif
 #if defined(CPU_FAMILY_PIC18_Q83Q84)
-    // ToDo
+    TRISA = 0b11111111;     // A7:OSC1 A6:OSC2 A2:BtnProg
+    TRISB = 0b00111011;     // B7:LedSlim B6:LedFlim B3:CANRX B2:CANTX0
+    TRISC = 0b11111111;
+    TRISE = 0b00001000;
+
+    ANSELA = 0x00;
+    ANSELB = 0x00;
+    ANSELC = 0x00;
+
+    WPUA = 0b00111011;      // A7:OSC1 A6:OSC2 A2:BtnProg
+    WPUB = 0b00110011;      // B7:LedSlim B6:LedFlim B3:CANRX B2:CANTX
+    WPUC = 0b11111111;
+    WPUE = 0b00000000;
 #endif
 
     LATB = 0b11000000;      // RB7 & RB6 set high (LEDs on)
@@ -568,7 +642,51 @@ void main() __at(0x0020) {
     TXB0SIDL = 0b00001000;
 #endif
 #if defined(CAN1_BUFFERS_BASE_ADDRESS)
-// ToDo
+    /* Enable the CAN module */
+    C1CONHbits.ON = 1;
+
+    C1CONTbits.REQOP = 0b100;
+    while (C1CONUbits.OPMOD != 0b100);  // Wait for Configuration mode
+
+    /* Initialize the C1FIFOBA with the start address of the CAN FIFO message object area. */
+    C1FIFOBA = CAN1_BUFFERS_BASE_ADDRESS;
+
+    C1CONL = 0x60;      // CLKSEL0 disabled; PXEDIS enabled; ISOCRCEN enabled; DNCNT 0;
+    C1CONH = 0x97;      // ON enabled; FRZ disabled; SIDL disabled; BRSDIS enabled; WFT T11 Filter; WAKFIL enabled;
+    C1CONU = 0x10;      // TXQEN enabled; STEF disabled; SERR2LOM disabled; ESIGM disabled; RTXAT disabled;
+
+    C1NBTCFGL = 0x02;   // SJW 2;
+    C1NBTCFGH = 0x02;   // TSEG2 2;
+    C1NBTCFGU = 0x03;   // TSEG1 3;
+    C1NBTCFGT = 0x3F;   // BRP 63;
+
+    C1TXQCONL = 0x00;   // TXATIE disabled; TXQEIE disabled; TXQNIE disabled;
+    C1TXQCONH = 0x04;   // FRESET enabled; UINC disabled;
+    C1TXQCONU = 0x60;   // TXAT 3; TXPRI 1;
+    C1TXQCONT = 0x00;   // PLSIZE 8; FSIZE 1;
+
+    C1FIFOCON1L = 0x00; // TXEN disabled; RTREN disabled; RXTSEN disabled; TXATIE disabled; RXOVIE disabled; TFERFFIE disabled; TFHRFHIE disabled; TFNRFNIE disabled;
+    C1FIFOCON1H = 0x04; // FRESET enabled; TXREQ disabled; UINC disabled;
+    C1FIFOCON1U = 0x20; // TXAT Three retransmission attempts; TXPRI 1;
+    C1FIFOCON1T = 0x00; // PLSIZE 8; FSIZE 1;
+
+    C1FLTOBJ0L = 0b00000000;
+    C1FLTOBJ0H = 0b00111000;
+    C1FLTOBJ0U = 0b00000000;
+    C1FLTOBJ0T = 0b01000000;    // EXIDE set: allow extended ID only
+    C1MASK0L = 0b11111111;
+    C1MASK0H = 0b11000111;
+    C1MASK0U = 0b11111111;
+    C1MASK0T = 0b01011111;      // MIDE set: filter on EXIDE
+    C1FLTCON0L = 0x81;  // FLTEN0 enabled; F0BP FIFO 1; 
+
+    C1INTL = 0x00;      // MODIF disabled; TBCIF disabled;
+    C1INTH = 0x00;      // IVMIF disabled; WAKIF disabled; CERRIF disabled; SERRIF disabled;
+    C1INTU = 0x08;      // TEFIE disabled; MODIE enabled; TBCIE disabled; RXIE disabled; TXIE disabled;
+    C1INTT = 0xFC;      // IVMIE enabled; WAKIE enabled; CERRIE enabled; SERRIE enabled; RXOVIE enabled; TXATIE enabled;
+
+    C1CONTbits.REQOP = 0b110;
+    while (C1CONUbits.OPMOD != 0b110);  // Wait for Normal 2.0 mode
 #endif
 
 //********* Initialise local variables
