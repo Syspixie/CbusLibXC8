@@ -179,6 +179,8 @@ volatile buff_t rxBuff __at(ECAN_BUFFERS_BASE_ADDRESS + 6);  // RXB0 D0-D7
 #endif
 #if defined(CAN1_BUFFERS_BASE_ADDRESS)
 // CAN1_BUFFERS_BASE_ADDRESS is the address of TXQ; FIFO1 is next one up...
+volatile uint8_t txFifoObj[16] __at(CAN1_BUFFERS_BASE_ADDRESS);
+volatile uint8_t rxFifoObj[16] __at(CAN1_BUFFERS_BASE_ADDRESS + 16);
 volatile buff_t rxBuff __at(CAN1_BUFFERS_BASE_ADDRESS + 24);
 #endif
 
@@ -501,10 +503,17 @@ static void sendResponse(canSend_t data) {
     TXB0CONbits.TXREQ = 1;
 #endif
 #if defined(CAN1_BUFFERS_BASE_ADDRESS)
-// ToDo
+    // Wait for any previous transmission to complete
+    while (C1TXQCONH & _C1TXQCONH_TXREQ_MASK);
+
+    // Set up data to send
+    txFifoObj[4] = 0b00010001;  // RTR=0; EID=1; DLC=1
+    txFifoObj[8] = data;
+
+    // Start transmission
+    C1TXQCONH |= (_C1TXQCONH_TXREQ_MASK | _C1TXQCONH_UINC_MASK);
 #endif
 }
-
 
 /**
  * Clears the bootloader flag then perform a software device reset.
@@ -636,10 +645,10 @@ void main() __at(0x0020) {
     while ((CANSTAT & 0xE0) != 0x00); // wait until ECAN is in Normal mode
 
     // Transmit buffer ID
-    TXB0EIDH = 0b00000000;
-    TXB0EIDL = 0b00000100;
-    TXB0SIDH = 0b10000000;
     TXB0SIDL = 0b00001000;
+    TXB0SIDH = 0b10000000;
+    TXB0EIDL = 0b00000100;
+    TXB0EIDH = 0b00000000;
 #endif
 #if defined(CAN1_BUFFERS_BASE_ADDRESS)
     /* Enable the CAN module */
@@ -687,6 +696,12 @@ void main() __at(0x0020) {
 
     C1CONTbits.REQOP = 0b110;
     while (C1CONUbits.OPMOD != 0b110);  // Wait for Normal 2.0 mode
+
+    // Transmit FIFO ID
+    txFifoObj[0] = 0b00000000;
+    txFifoObj[1] = 0b00100100;
+    txFifoObj[2] = 0b00000000;
+    txFifoObj[3] = 0b00000000;
 #endif
 
 //********* Initialise local variables
@@ -699,32 +714,39 @@ void main() __at(0x0020) {
 
     while (true) {
 
-        // Get some data
-        do {
-            
+        bool validMsg = true;
+
 #if defined(ECAN_BUFFERS_BASE_ADDRESS)
-            // Buffer ready to receive
-            RXB0CONbits.RXFUL = 0;
+        // Wait for message
+        while (!RXB0CONbits.RXFUL);
 
-            // Wait for message (clearing watchdog timer)
-            while (!RXB0CONbits.RXFUL) ClrWdt();
+        // Check RTR || !EXIDE
+        if (RXB0DLCbits.RTR || !RXB0SIDLbits.EXIDE) validMsg = false;
 
-            // Data count
-            buffLen = RXB0DLCbits.DLC;
+        // Data count
+        buffLen = RXB0DLCbits.DLC;
 #endif
 #if defined(CAN1_BUFFERS_BASE_ADDRESS)
-// ToDo
+        // Wait for message
+        while (!(C1FIFOSTA1L & _C1FIFOSTA1L_TFNRFNIF_MASK));
+
+        // Check FDF || BRS || RTR || !EID
+        if ((rxFifoObj[4] ^ 0b00010000) & 0b11110000) validMsg = false;
+
+        // Data count
+        buffLen = rxFifoObj[4] & 0b00001111;
 #endif
+        if (buffLen > 8 || buffLen == 0) validMsg = false;
 
-        } while (buffLen == 0);
+        if (!validMsg) {
+            // Ignore message
 
-#if defined(ECAN_BUFFERS_BASE_ADDRESS)
         // Lowest bit of CAN ID determines whether PUT data or command sent
-        if (RXB0EIDLbits.EID0) {
+#if defined(ECAN_BUFFERS_BASE_ADDRESS)
+        } else if (RXB0EIDLbits.EID0) {
 #endif
 #if defined(CAN1_BUFFERS_BASE_ADDRESS)
-// ToDo
-        if (true) {
+        } else if (rxFifoObj[1] & 0b00001000) {
 #endif
 
             //********* Received PUT data
@@ -789,6 +811,16 @@ void main() __at(0x0020) {
                 } break;
             }
         }
+
+#if defined(ECAN_BUFFERS_BASE_ADDRESS)
+        // Buffer ready to receive
+        RXB0CONbits.RXFUL = 0;
+#endif
+#if defined(CAN1_BUFFERS_BASE_ADDRESS)
+        // Buffer ready to receive
+        C1FIFOCON1H |= _C1FIFOCON1H_UINC_MASK;
+        C1FIFOSTA1L &= ~_C1FIFOSTA1L_RXOVIF_MASK;
+#endif
     }
 }
 
