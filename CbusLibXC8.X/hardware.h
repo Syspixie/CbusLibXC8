@@ -110,7 +110,7 @@ typedef uint8_t flashPageOffset_t;
 #endif
 #if defined(_18F27Q83)
 #define CPU_FAMILY_PIC18_Q83Q84
-#define CPU_ID P18F27Q83
+#define CPU_ID P18F26K83        // There is a 27Q83 definded, but not in FCU
 #define FLASH_TOP 0x01FFFF              // 128K bytes
 #define FLASH_PAGE_SIZE 256
 #define FLASH_PAGE_BUFFER_ADDRESS 0x3700
