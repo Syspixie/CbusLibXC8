@@ -183,7 +183,7 @@ void can1SetID(uint16_t stdID) {
 static bool transmitMessage(bytes16_t stdID, bool isRtr, uint8_t dataLen, uint8_t* data) {
 
     // Done if FIFO full
-    if (!(C1TXQSTAL & _C1TXQSTAL_TXQNIF_MASK)) return false;
+    if (!C1TXQSTALbits.TXQNIF) return false;
 
     // Pointer to FIFO entry
     uint8_t* txFifoObj = (uint8_t*) C1TXQUA;
@@ -201,7 +201,8 @@ static bool transmitMessage(bytes16_t stdID, bool isRtr, uint8_t dataLen, uint8_
     utilMemcpy(&txFifoObj[8], data, dataLen);
 
     // Request transmission; increment FIFO
-    C1TXQCONH |= (_C1TXQCONH_TXREQ_MASK | _C1TXQCONH_UINC_MASK);
+    C1TXQCONHbits.TXREQ = 1;
+    C1TXQCONHbits.UINC = 1;
 
     return true;
 }
@@ -244,7 +245,7 @@ void can1Transmit() {
 bool can1Receive(bytes16_t* stdID, bool* isRtr, uint8_t* dataLen) {
 
     // Done if nothing in FIFO
-    if (!(C1FIFOSTA1L & _C1FIFOSTA1L_TFNRFNIF_MASK)) return false;
+    if (!C1FIFOSTA1Lbits.TFNRFNIF) return false;
 
     // Pointer to FIFO entry
     uint8_t* rxFifoObj = (uint8_t*) C1FIFOUA1;
@@ -274,8 +275,8 @@ bool can1Receive(bytes16_t* stdID, bool* isRtr, uint8_t* dataLen) {
     }
 
     // Increment FIFO; clear any overflow flag
-    C1FIFOCON1H |= _C1FIFOCON1H_UINC_MASK;
-    C1FIFOSTA1L &= ~_C1FIFOSTA1L_RXOVIF_MASK;
+    C1FIFOCON1Hbits.UINC = 1;
+    C1FIFOSTA1Lbits.RXOVIF = 0;
 
     return ok;
 }
