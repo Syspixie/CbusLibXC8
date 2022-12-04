@@ -290,8 +290,10 @@ bool receiveCbusCan() {
 
 /**
  * Checks for an unsolicited outgoing message.
+ * 
+ * @return true if message transmitted.
  */
-void transmitCbusCan() {
+bool transmitCbusCan() {
 
     int8_t tx = 0;
 
@@ -303,6 +305,8 @@ void transmitCbusCan() {
 
     // Send message if there is one
     if (tx) queueTransmit(tx);
+
+    return (tx);
 }
 
 /**

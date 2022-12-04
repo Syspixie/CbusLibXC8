@@ -84,7 +84,7 @@ extern "C" {
 
     void initCbusCan(void);
     bool receiveCbusCan(void);
-    void transmitCbusCan(void);
+    bool transmitCbusCan(void);
     void enumerateCbusCanID(bool sendResult);
     bool setCbusCanID(uint8_t newCanID, bool check);
 #if !defined(IVT_BASE_ADDRESS)

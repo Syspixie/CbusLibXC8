@@ -206,11 +206,14 @@ void processModule(void) {
             shortFlicker();
         }
 
+//        appProcess();   // Application process
+
         // Process unsolicited outgoing messages
-        transmitCbusCan();          // Calls GenerateCbusMessage
+        if (transmitCbusCan()) {    // Calls GenerateCbusMessage
+            shortFlicker();
+        }
     }
 }
-
 
 /**
  * Called when a CBUS message has been received.  Processes the message defined
@@ -237,6 +240,12 @@ int8_t generateCbusMessage() {
 
     int8_t tx = processInteract();          // Process mode button and LEDs
     if (!tx) tx = processTimedResponse();   // Process any timed responses
+    if (tx) return tx;
+
+    // Most applications operate in FLiM mode
+    if (interactState == interactStateFlim) {
+//        tx = appGenerateCbusMessage();      // Application outgoing messages
+    }
     return  tx;
 }
 
@@ -254,6 +263,8 @@ int8_t generateCbusMessage() {
  *      in cbusMsg[5..7].
  */
 void processCbusEvent(uint8_t eventIndex) {
+
+//    appProcessCbusEvent(eventIndex);        // Application incoming events
 }
 
 /**

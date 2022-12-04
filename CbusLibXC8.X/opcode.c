@@ -344,14 +344,14 @@ const op_t ops[] = {
     {/* 0xEC */ NULL, 0},
     {/* 0xED */ NULL, 0},
     {/* 0xEE */ NULL, 0},
-    {/* 0xEF */ NULL /* PARAMS */, 0},
+    {/* 0xEF */ NULL /* PARAMS */, 0},              // Response to request for node parameters
     {/* 0xF0 */ opCodeACOxn, M_CheckNN},            // Accessory ON
     {/* 0xF1 */ opCodeACOxn, M_CheckNN},            // Accessory OFF
     {/* 0xF2 */ NULL /* ENRSP */, M_AddNN},         // Response to request to read node events
     {/* 0xF3 */ NULL, 0},
     {/* 0xF4 */ NULL, 0},
     {/* 0xF5 */ opCodeEVLRNI, M_Learn},             // Teach an event in learn mode using event indexing
-    {/* 0xF6 */ NULL, 0},
+    {/* 0xF6 */ NULL /* ACDAT */, M_AddNN},         // Accessory node data event (aka debug)
     {/* 0xF7 */ NULL, 0},
     {/* 0xF8 */ opCodeASOxn, 0},                    // Accessory Short ON
     {/* 0xF9 */ opCodeASOxn, 0},                    // Accessory Short OFF
