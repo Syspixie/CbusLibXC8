@@ -722,8 +722,8 @@ void main() __at(0x0020) {
         // Wait for message
         while (!RXB0CONbits.RXFUL);
 
-        // Check RTR || !EXIDE
-        if (RXB0DLCbits.RTR || !RXB0SIDLbits.EXIDE) validMsg = false;
+        // Check RXRTR || !EXID
+        if (RXB0DLCbits.RXRTR || !RXB0SIDLbits.EXID) validMsg = false;
 
         // Data count
         buffLen = RXB0DLCbits.DLC;
