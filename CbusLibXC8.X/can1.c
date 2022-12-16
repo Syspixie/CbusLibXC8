@@ -200,9 +200,8 @@ static bool transmitMessage(bytes16_t stdID, bool isRtr, uint8_t dataLen, uint8_
     // Put data
     utilMemcpy(&txFifoObj[8], data, dataLen);
 
-    // Increment FIFO; request transmission
-    C1TXQCONHbits.UINC = 1;
-    C1TXQCONHbits.TXREQ = 1;
+    // Increment FIFO; request transmission (must happen together)
+    C1TXQCONH |= (_C1TXQCONH_TXREQ_MASK | _C1TXQCONH_UINC_MASK);
 
     return true;
 }

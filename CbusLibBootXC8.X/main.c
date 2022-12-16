@@ -511,9 +511,8 @@ static void sendResponse(canSend_t data) {
     txFifoObj[4] = 0b00010001;  // RTR=0; EID=1; DLC=1
     txFifoObj[8] = data;
 
-    // Start transmission
-    C1TXQCONHbits.UINC = 1;
-    C1TXQCONHbits.TXREQ = 1;
+    // Start transmission (must happen together)
+    C1TXQCONH |= (_C1TXQCONH_TXREQ_MASK | _C1TXQCONH_UINC_MASK);
 #endif
 }
 
