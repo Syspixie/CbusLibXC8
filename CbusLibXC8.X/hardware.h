@@ -119,7 +119,7 @@ typedef uint24_t flashAddr_t;
 typedef uint16_t flashPageOffset_t;
 #endif
 
-#define _XTAL_FREQ 64000000             // Used by __delay_ms macro
+#define _XTAL_FREQ 64000000             // Used by __delay_ms and __delay_us
 
 #if defined(CPU_FAMILY_PIC18_K80)
 #define INTERRUPT_DisableHigh() (INTCONbits.GIEH = 0)
@@ -133,7 +133,8 @@ typedef uint16_t flashPageOffset_t;
 #define INTERRUPT_EnableHigh() (INTCON0bits.GIEH = 1)
 #define INTERRUPT_DisableLow() (INTCON0bits.GIEL = 0)
 #define INTERRUPT_EnableLow() (INTCON0bits.GIEL = 1)
-#define IVT_BASE_ADDRESS 0x000760           // 80 vectors; 0x000800 - (2 * 80)
+#define IVT_BASE_ADDRESS 0x000B50
+#define IVT_NUM_VECTORS 80
 #define ECAN_BUFFERS_BASE_ADDRESS 0x3F80    // Access Bank address (RXB0CON)
 #endif
 #if defined(CPU_FAMILY_PIC18_Q83Q84)
@@ -141,7 +142,8 @@ typedef uint16_t flashPageOffset_t;
 #define INTERRUPT_EnableHigh() (INTCON0bits.GIEH = 1)
 #define INTERRUPT_DisableLow() (INTCON0bits.GIEL = 0)
 #define INTERRUPT_EnableLow() (INTCON0bits.GIEL = 1)
-#define IVT_BASE_ADDRESS 0x0006E0           // 144 vectors; 0x000800 - (2 * 144)
+#define IVT_BASE_ADDRESS 0x000C50
+#define IVT_NUM_VECTORS 129
 #define CAN1_BUFFERS_BASE_ADDRESS 0x3800
 #endif
 

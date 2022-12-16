@@ -118,6 +118,7 @@
 #include "event.h"
 #include "flim.h"
 #include "cbuscan.h"
+//#include "app.h"        // Application header
 
 extern const uint8_t flashVersion __at(FLASH_VERSION_ADDRESS);
 
@@ -140,8 +141,7 @@ static void resetEeprom(bool init) {
         writeEeprom8(EEPROM_FLIM_MODE, interactStateSlim);
     }
 
-    // Write any application specific EEPROM values
-    // e.g. writeEeprom8(4, 0xEE);     // Write 0xEE to EEPROM address 4
+//    appResetEeprom(init);   // Application initialise EEPROM
 
     if (init) writeEeprom8(EEPROM_VERSION, CURRENT_EEPROM_VERSION);
 }
@@ -159,8 +159,7 @@ static void resetFlash(bool init) {
 
     if (!init) removeAllEvents();
 
-    // Write any application specific node variable values
-    // e.g. writeFlashCached8((flashAddr_t) &nodeVarData[3], 0xEE);     // Write 0xEE to NV#4
+//    appResetFlash(init);    // Application initialise FLASH
 
     if (init) writeFlashCached8((flashAddr_t) &flashVersion, CURRENT_FLASH_VERSION);
     flushFlashCache();
@@ -193,6 +192,8 @@ void processModule(void) {
     initInteract();
     initEvent();
     initCbusCan();
+
+//    appInit();      // Application initialisation
 
     // Enable interrupts
     INTERRUPT_EnableHigh();
@@ -377,8 +378,10 @@ void moduleLowPriorityIsr(void) {
  */
 void moduleTimerIsr() {
 
-    cbusCanTimerIsr();     // Process 'tick' CAN bus operations
-    interactTimerIsr();    // Process 'tick' button and LED operations
+    cbusCanTimerIsr();      // Process 'tick' CAN bus operations
+    interactTimerIsr();     // Process 'tick' button and LED operations
+
+//    appTimerIsr();          // Application 'tick' operations
 }
 
 

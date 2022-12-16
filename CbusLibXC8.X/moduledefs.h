@@ -86,7 +86,7 @@ extern "C" {
 
 
 #define MAJOR_VERSION 2
-#define MINOR_VERSION 'a'
+#define MINOR_VERSION 'b'
 #define BETA_VERSION 0                  // 0: production
 
 #define CURRENT_EEPROM_VERSION 1
@@ -125,8 +125,12 @@ extern "C" {
 
 // Bottom up...
 #define APPLICATION_BASE_ADDRESS 0x000800
-#define PARAMETER_BLOCK_ADDRESS (APPLICATION_BASE_ADDRESS + 0x20)
-#define MODULE_TYPE_NAME_ADDRESS (PARAMETER_BLOCK_ADDRESS + sizeof(parameterBlock_t))
+// Leave space for reset and interrupt vectors
+#define PARAMETER_BLOCK_ADDRESS (APPLICATION_BASE_ADDRESS + 32)     // 0x000820
+// Leave space for parameter block
+#define MODULE_TYPE_NAME_ADDRESS (PARAMETER_BLOCK_ADDRESS + 32)     // 0x000840
+// Leave space for module type name, and a bit spare
+#define OPCODES_TABLE_ADDRESS (MODULE_TYPE_NAME_ADDRESS + 8 + 8)    // 0x000850
 
 // Top down...
 // Put flashVersion on the first word boundary below top
