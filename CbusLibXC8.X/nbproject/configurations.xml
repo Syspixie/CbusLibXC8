@@ -284,8 +284,6 @@
                   value="${memories.instruction.ram.ranges}"/>
         <property key="memories.programmemory" value="true"/>
         <property key="memories.programmemory.ranges" value="0-ffff"/>
-        <property key="programmerToGoFilePath"
-                  value="D:/Visual Studio/Repos/Model Railway Firmware/CbusLib/CbusLibXC8.X/debug/26K80/CbusLibXC8_ptg"/>
         <property key="programoptions.donoteraseauxmem" value="false"/>
         <property key="programoptions.eraseb4program" value="true"/>
         <property key="programoptions.pgmentry.voltage" value="low"/>
@@ -528,8 +526,6 @@
                   value="${memories.instruction.ram.ranges}"/>
         <property key="memories.programmemory" value="true"/>
         <property key="memories.programmemory.ranges" value="0-7fff"/>
-        <property key="programmerToGoFilePath"
-                  value="D:/Visual Studio/Repos/Model Railway Firmware/CbusLib/CbusLibXC8.X/debug/25K83/CbusLibXC8_ptg"/>
         <property key="programoptions.donoteraseauxmem" value="false"/>
         <property key="programoptions.eraseb4program" value="true"/>
         <property key="programoptions.pgmentry.voltage" value="low"/>
@@ -629,7 +625,7 @@
       <HI-TECH-LINK>
         <property key="additional-options-checksum" value=""/>
         <property key="additional-options-code-offset" value="0x0800"/>
-        <property key="additional-options-command-line" value=""/>
+        <property key="additional-options-command-line" value="-Wl,-Pmediumconst=848h"/>
         <property key="additional-options-errata" value=""/>
         <property key="additional-options-extend-address" value="false"/>
         <property key="additional-options-trace-type" value=""/>
@@ -774,8 +770,6 @@
                   value="${memories.instruction.ram.ranges}"/>
         <property key="memories.programmemory" value="true"/>
         <property key="memories.programmemory.ranges" value="0-1ffff"/>
-        <property key="programmerToGoFilePath"
-                  value="D:/Visual Studio/Repos/Model Railway Firmware/CbusLib/CbusLibXC8.X/debug/27Q83/CbusLibXC8_ptg"/>
         <property key="programoptions.donoteraseauxmem" value="false"/>
         <property key="programoptions.eraseb4program" value="true"/>
         <property key="programoptions.pgmentry.voltage" value="low"/>
