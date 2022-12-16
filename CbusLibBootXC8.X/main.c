@@ -512,8 +512,8 @@ static void sendResponse(canSend_t data) {
     txFifoObj[8] = data;
 
     // Start transmission
-    C1TXQCONHbits.TXREQ = 1;
     C1TXQCONHbits.UINC = 1;
+    C1TXQCONHbits.TXREQ = 1;
 #endif
 }
 
