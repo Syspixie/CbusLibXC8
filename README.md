@@ -16,6 +16,9 @@ Code to provide bootloader functionality for a CbusLibXC8 application.
 
 # Revision History
 
+### Version 2bRev1
+Corrected CAN1 transmission sequence.
+
 ### Version 2b
 Moved Interrupt Vector Table to be compatible with bootloader.
 
