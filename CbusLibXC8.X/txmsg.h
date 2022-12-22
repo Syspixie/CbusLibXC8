@@ -1,5 +1,5 @@
 /**
- * @file CbusLibXC8 timedresponse.h
+ * @file CbusLibXC8 txmsg.h
  * @copyright (C) 2022 Konrad Orlowski     <syspixie@gmail.com>
  * 
  *  CbusLibXC8 is licensed under the:
@@ -58,11 +58,11 @@
 
 /**
  * @author Konrad Orlowski
- * @date September 2022
+ * @date December 2022
  */
 
-#ifndef TIMEDRESPONSE_H
-#define	TIMEDRESPONSE_H
+#ifndef TXMSG_H
+#define	TXMSG_H
 
 #ifdef	__cplusplus
 extern "C" {
@@ -72,17 +72,16 @@ extern "C" {
 #include "global.h"
 
 
-    typedef int8_t (* timedResponseFunction_t)(uint8_t call /* 0 to numCalls - 1 */, uint8_t numCalls);
+    typedef int8_t (* txMsgFunction_t)(uint8_t p1, uint8_t p2);
 
 
-    void initTimedResponse(void);
-    int8_t processTimedResponse(void);
-    void cancelTimedResponse(void);
-    bool enqueueTimedResponse(timedResponseFunction_t func, uint8_t numCalls);
+    void initTXMsg(void);
+    int8_t processTXMsg(void);
+    bool enqueueTXMsg(txMsgFunction_t func, uint8_t p1, uint8_t p2);
 
 
 #ifdef	__cplusplus
 }
 #endif
 
-#endif	/* TIMEDRESPONSE_H */
+#endif	/* TXMSG_H */

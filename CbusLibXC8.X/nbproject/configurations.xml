@@ -20,12 +20,12 @@
       <itemPath>moduledefs.h</itemPath>
       <itemPath>opcode.h</itemPath>
       <itemPath>stats.h</itemPath>
-      <itemPath>timedresponse.h</itemPath>
       <itemPath>util.h</itemPath>
       <itemPath>hardware.h</itemPath>
       <itemPath>ports.h</itemPath>
       <itemPath>ecan.h</itemPath>
       <itemPath>can1.h</itemPath>
+      <itemPath>txmsg.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -44,12 +44,12 @@
       <itemPath>millis.c</itemPath>
       <itemPath>module.c</itemPath>
       <itemPath>opcode.c</itemPath>
-      <itemPath>timedresponse.c</itemPath>
       <itemPath>util.c</itemPath>
       <itemPath>ports.c</itemPath>
       <itemPath>configbits.c</itemPath>
       <itemPath>ecan.c</itemPath>
       <itemPath>can1.c</itemPath>
+      <itemPath>txmsg.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"

@@ -1,5 +1,5 @@
 /**
- * @file CbusLibXC8 timedresponse.c
+ * @file CbusLibXC8 txmsg.c
  * @copyright (C) 2022 Konrad Orlowski     <syspixie@gmail.com>
  * 
  *  CbusLibXC8 is licensed under the:
@@ -61,7 +61,7 @@
  * time.
  * 
  * @author Konrad Orlowski
- * @date September 2022
+ * @date December 2022
  * 
  * Provides the facility to schedule the calling of a function a number of
  * times.  Most useful for sending multiple responses to a request, e.g.
@@ -69,87 +69,45 @@
  * 
  * Each specified function is queued, along with the number of calls required.
  * As each function is dequeued it is called the requisite number of times, with
- * a defined interval TIMEDRESPONSE_DELAY_MILLIS (~10ms) between calls.
+ * a defined interval TXMSG_DELAY_MILLIS (~10ms) between calls.
  * 
  * The function will normally populate cbusMsg[] with a message and return 1 to
- * send it; it may call cancelTimedResponse() to cut short the call sequence.
+ * send it; it may call cancelTXMsg() to cut short the call sequence.
  */
 
 
-#include "timedresponse.h"
+#include "txmsg.h"
 #include "millis.h"
 #include "module.h"
 
 
-#define TIMEDRESPONSE_QUEUE_CUR_LENGTH ((uint8_t) queueHead - queueTail)
+#define TXMSG_QUEUE_CUR_LENGTH ((uint8_t) queueHead - queueTail)
 
 
 typedef struct {
-    timedResponseFunction_t function;
-    uint8_t numCalls;
+    txMsgFunction_t function;
+    uint8_t p1;
+    uint8_t p2;
 } tmdrspEntry_t;
 
 
 // Function queue
-tmdrspEntry_t queue[TIMEDRESPONSE_QUEUE_LENGTH];
+tmdrspEntry_t queue[TXMSG_QUEUE_LENGTH];
 uint8_t queueHead = 0;
 uint8_t queueTail = 0;
 
-// Details of current function
-timedResponseFunction_t curFunc;
-uint8_t curNumCalls;
-uint8_t remainingCalls = 0;
-
 uint16_t lastRunMillis;
+bool lastRunValid = false;
 
 
 /**
  * Initialises timed response.
  */
-void initTimedResponse() {
+void initTXMsg() {
 
+    // Initial delay whilst things settle down
     lastRunMillis = getMillisShort();
-}
-
-/**
- * Checks the timer and calls the queued function when required.
- * 
- * @return 1: send response; 0: no response; <0: send error response.
- * @post cbusMsg[] Outgoing message.
- */
-int8_t processTimedResponse() {
-
-    // Exit if not scheduled to run yet
-    if (getMillisShort() - lastRunMillis < TIMEDRESPONSE_DELAY_MILLIS) return 0;
-    lastRunMillis = getMillisShort();
-
-    // If no current function, get the next (if any)
-    while (remainingCalls == 0) {
-
-        // Done if no functions queued
-        if (TIMEDRESPONSE_QUEUE_CUR_LENGTH == 0) return 0;
-
-        // Dequeue next function
-        uint8_t idx = queueTail % TIMEDRESPONSE_QUEUE_LENGTH;
-        curFunc = queue[idx].function;
-        curNumCalls = queue[idx].numCalls;
-        ++queueTail;
-
-        remainingCalls = curNumCalls;
-    }
-
-    // Call function
-    return curFunc(curNumCalls - remainingCalls--, curNumCalls);
-}
-
-/**
- * Cancels the current timed response function.
- * 
- * @note Usually called by the timed response function itself.
- */
-void cancelTimedResponse() {
-
-    remainingCalls = 0;
+    lastRunValid = true;
 }
 
 /**
@@ -159,15 +117,52 @@ void cancelTimedResponse() {
  * @param numCalls Number of times that the function should be called.
  * @return true Function successfully queued.
  */
-bool enqueueTimedResponse(timedResponseFunction_t func, uint8_t numCalls) {
+bool enqueueTXMsg(txMsgFunction_t func, uint8_t p1, uint8_t p2) {
 
     // Check space on the queue
-    if (TIMEDRESPONSE_QUEUE_CUR_LENGTH == TIMEDRESPONSE_QUEUE_LENGTH) return false;
+    if (TXMSG_QUEUE_CUR_LENGTH == TXMSG_QUEUE_LENGTH) return false;
 
     // Enqueue the function
-    uint8_t idx = queueHead % TIMEDRESPONSE_QUEUE_LENGTH;
+    uint8_t idx = queueHead % TXMSG_QUEUE_LENGTH;
     queue[idx].function = func;
-    queue[idx].numCalls = numCalls;
+    queue[idx].p1 = p1;
+    queue[idx].p2 = p2;
     ++queueHead;
     return true;
+}
+
+/**
+ * Checks the timer and calls the queued function when required.
+ * 
+ * @return 1: send response; 0: no response; <0: send error response.
+ * @post cbusMsg[] Outgoing message.
+ */
+int8_t processTXMsg() {
+
+    // Exit if not scheduled to run yet
+    if (lastRunValid) {
+        if (getMillisShort() - lastRunMillis < TXMSG_DELAY_MILLIS) return 0;
+        lastRunValid = false;
+    }
+
+    // Done if no functions queued
+    if (TXMSG_QUEUE_CUR_LENGTH == 0) return 0;
+
+    // Dequeue next function
+    uint8_t idx = queueTail % TXMSG_QUEUE_LENGTH;
+    txMsgFunction_t func = queue[idx].function;
+    uint8_t p1 = queue[idx].p1;
+    uint8_t p2 = queue[idx].p2;
+    ++queueTail;
+
+    // Call function
+    int8_t tx = func(p1, p2);
+
+    // Delay next message if transmitting this one
+    if (tx) {
+        lastRunMillis = getMillisShort();
+        lastRunValid = true;
+    }
+
+    return tx;
 }

@@ -74,10 +74,10 @@ extern "C" {
 
     void initEvent(void);
     uint8_t findEvent(uint16_t nodeNumber, uint16_t eventNumber);
-    uint8_t addEvent(uint16_t nodeNumber, uint16_t eventNumber, uint8_t evNumber, uint8_t evValue, bool useMyNodeNumber);
-    uint8_t writeEventVar(uint8_t eventIndex, uint8_t evNumber, uint8_t evValue);
-    uint8_t updateEvent(uint8_t eventIndex, uint16_t nodeNumber, uint16_t eventNumber, uint8_t evNumber, uint8_t evValue);
-    uint8_t getEventVarValue(uint8_t eventIndex, uint8_t varNumber, uint8_t* varValuePtr);
+    uint8_t addEvent(uint16_t nodeNumber, uint16_t eventNumber, uint8_t varIndex, uint8_t varValue, bool useMyNodeNumber);
+    uint8_t writeEventVar(uint8_t eventIndex, uint8_t varIndex, uint8_t varValue);
+    uint8_t updateEvent(uint8_t eventIndex, uint16_t nodeNumber, uint16_t eventNumber, uint8_t varIndex, uint8_t varValue);
+    uint8_t getEventVarValue(uint8_t eventIndex, uint8_t varIndex, uint8_t* varValuePtr);
     uint8_t getEventVarCount(uint8_t eventIndex, uint8_t* varCountPtr);
     uint8_t removeEvent(uint8_t eventIndex);
     uint8_t countEvents(void);

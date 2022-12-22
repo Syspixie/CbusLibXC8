@@ -112,13 +112,14 @@
 #include "millis.h"
 #include "eeprom.h"
 #include "flash.h"
-#include "timedresponse.h"
+#include "txmsg.h"
 #include "opcode.h"
 #include "interact.h"
 #include "event.h"
 #include "flim.h"
 #include "cbuscan.h"
 //#include "app.h"        // Application header
+
 
 extern const uint8_t flashVersion __at(FLASH_VERSION_ADDRESS);
 
@@ -188,7 +189,7 @@ void processModule(void) {
     cbusNodeNumber.value = readEeprom16(EEPROM_NODE_NUMBER);
     canBusID = readEeprom8(EEPROM_CAN_ID);
 
-    initTimedResponse();
+    initTXMsg();
     initInteract();
     initEvent();
     initCbusCan();
@@ -240,7 +241,7 @@ int8_t processCbusMessage() {
 int8_t generateCbusMessage() {
 
     int8_t tx = processInteract();          // Process mode button and LEDs
-    if (!tx) tx = processTimedResponse();   // Process any timed responses
+    if (!tx) tx = processTXMsg();           // Process queued messages
     if (tx) return tx;
 
     // Most applications operate in FLiM mode
@@ -312,12 +313,16 @@ void enterFlimMode() {
 
     // Save setting change
     updateEepromMode();
+
+//    appEnterFlimMode();     // Application enter FLiM mode
 }
 
 /**
  * Called when mode button press causes switch from FLiM mode to SLiM mode.
  */
 void enterSlimMode() {
+
+//    appLeaveFlimMode();     // Application leave FLiM mode
 
     // Clear CAN ID (updates EEPROM)
     setCbusCanID(0, false);

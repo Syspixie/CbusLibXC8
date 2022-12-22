@@ -249,16 +249,16 @@ const op_t ops[]__at(OPCODES_TABLE_ADDRESS) = {
     {/* 0x8D */ NULL, 0},
     {/* 0x8E */ NULL, 0},
     {/* 0x8F */ NULL, 0},
-    {/* 0x90 */ opCodeACOxn, M_CheckNN},            // Accessory ON
-    {/* 0x91 */ opCodeACOxn, M_CheckNN},            // Accessory OFF
+    {/* 0x90 */ opCodeACOxn, M_AddNN},              // Accessory ON
+    {/* 0x91 */ opCodeACOxn, M_AddNN},              // Accessory OFF
     {/* 0x92 */ NULL, 0},
     {/* 0x93 */ NULL, 0},
     {/* 0x94 */ NULL, 0},
     {/* 0x95 */ opCodeEVULN, M_Learn},              // Unlearn an event in learn mode
     {/* 0x96 */ opCodeNVSET, M_CheckNN},            // Set a node variable
     {/* 0x97 */ NULL /* NVANS */, M_AddNN},         // Response to a request for a node variable value
-    {/* 0x98 */ opCodeASOxn, 0},                    // Accessory Short ON
-    {/* 0x99 */ opCodeASOxn, 0},                    // Accessory Short OFF
+    {/* 0x98 */ opCodeASOxn, M_AddNN},              // Accessory Short ON
+    {/* 0x99 */ opCodeASOxn, M_AddNN},              // Accessory Short OFF
     {/* 0x9A */ NULL, 0},
     {/* 0x9B */ NULL /* PARAN*/, M_AddNN},          // Response to request for individual node parameter
     {/* 0x9C */ opCodeREVAL, M_CheckNN},            // Request for read of an event variable
@@ -281,16 +281,16 @@ const op_t ops[]__at(OPCODES_TABLE_ADDRESS) = {
     {/* 0xAD */ NULL, 0},
     {/* 0xAE */ NULL, 0},
     {/* 0xAF */ NULL, 0},
-    {/* 0xB0 */ opCodeACOxn, M_CheckNN},            // Accessory ON
-    {/* 0xB1 */ opCodeACOxn, M_CheckNN},            // Accessory OFF
+    {/* 0xB0 */ opCodeACOxn, M_AddNN},              // Accessory ON
+    {/* 0xB1 */ opCodeACOxn, M_AddNN},              // Accessory OFF
     {/* 0xB2 */ opCodeREQEV, M_Learn},              // Read event variable in learn mode
     {/* 0xB3 */ NULL, 0},
     {/* 0xB4 */ NULL, 0},
     {/* 0xB5 */ NULL /* NEVAL */, M_AddNN},         // Response to request for read of EV value
     {/* 0xB6 */ NULL /* PNN */, M_AddNN},           // Response to Query Node
     {/* 0xB7 */ NULL, 0},
-    {/* 0xB8 */ opCodeASOxn, 0},                    // Accessory Short ON
-    {/* 0xB9 */ opCodeASOxn, 0},                    // Accessory Short OFF
+    {/* 0xB8 */ opCodeASOxn, M_AddNN},              // Accessory Short ON
+    {/* 0xB9 */ opCodeASOxn, M_AddNN},              // Accessory Short OFF
     {/* 0xBA */ NULL, 0},
     {/* 0xBB */ NULL, 0},
     {/* 0xBC */ NULL, 0},
@@ -313,16 +313,16 @@ const op_t ops[]__at(OPCODES_TABLE_ADDRESS) = {
     {/* 0xCD */ NULL, 0},
     {/* 0xCE */ NULL, 0},
     {/* 0xCF */ NULL, 0},
-    {/* 0xD0 */ opCodeACOxn, M_CheckNN},            // Accessory ON
-    {/* 0xD1 */ opCodeACOxn, M_CheckNN},            // Accessory OFF
+    {/* 0xD0 */ opCodeACOxn, M_AddNN},              // Accessory ON
+    {/* 0xD1 */ opCodeACOxn, M_AddNN},              // Accessory OFF
     {/* 0xD2 */ opCodeEVLRN, M_Learn},              // Teach an event in learn mode
     {/* 0xD3 */ NULL /* EVANS */, M_AddNN},         // Response to a request for an EV value in learn mode
     {/* 0xD4 */ NULL, 0},
     {/* 0xD5 */ NULL, 0},
     {/* 0xD6 */ NULL, 0},
     {/* 0xD7 */ NULL, 0},
-    {/* 0xD8 */ opCodeASOxn, 0},                    // Accessory Short ON
-    {/* 0xD9 */ opCodeASOxn, 0},                    // Accessory Short OFF
+    {/* 0xD8 */ opCodeASOxn, M_AddNN},              // Accessory Short ON
+    {/* 0xD9 */ opCodeASOxn, M_AddNN},              // Accessory Short OFF
     {/* 0xDA */ NULL, 0},
     {/* 0xDB */ NULL, 0},
     {/* 0xDC */ NULL, 0},
@@ -345,16 +345,16 @@ const op_t ops[]__at(OPCODES_TABLE_ADDRESS) = {
     {/* 0xED */ NULL, 0},
     {/* 0xEE */ NULL, 0},
     {/* 0xEF */ NULL /* PARAMS */, 0},              // Response to request for node parameters
-    {/* 0xF0 */ opCodeACOxn, M_CheckNN},            // Accessory ON
-    {/* 0xF1 */ opCodeACOxn, M_CheckNN},            // Accessory OFF
+    {/* 0xF0 */ opCodeACOxn, M_AddNN},              // Accessory ON
+    {/* 0xF1 */ opCodeACOxn, M_AddNN},              // Accessory OFF
     {/* 0xF2 */ NULL /* ENRSP */, M_AddNN},         // Response to request to read node events
     {/* 0xF3 */ NULL, 0},
     {/* 0xF4 */ NULL, 0},
     {/* 0xF5 */ opCodeEVLRNI, M_Learn},             // Teach an event in learn mode using event indexing
     {/* 0xF6 */ NULL /* ACDAT */, M_AddNN},         // Accessory node data event (aka debug)
     {/* 0xF7 */ NULL, 0},
-    {/* 0xF8 */ opCodeASOxn, 0},                    // Accessory Short ON
-    {/* 0xF9 */ opCodeASOxn, 0},                    // Accessory Short OFF
+    {/* 0xF8 */ opCodeASOxn, M_AddNN},              // Accessory Short ON
+    {/* 0xF9 */ opCodeASOxn, M_AddNN},              // Accessory Short OFF
     {/* 0xFA */ NULL, 0},
     {/* 0xFB */ NULL, 0},
     {/* 0xFC */ NULL, 0},

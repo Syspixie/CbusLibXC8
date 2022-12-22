@@ -16,14 +16,18 @@ Code to provide bootloader functionality for a CbusLibXC8 application.
 
 # Revision History
 
-### Version 2bRev1
-Corrected CAN1 transmission sequence.
+### Version 2c
+Allow optimisation of event handling by assuming all event variables are used.
+Replaced timedresponse with txmsg to provide more flexibility in queueing output messages.
+Corrected opcode flags (check node number, add node number) for event opcodes.
+Corrected CAN1 buffer transmit sequence.
 
 ### Version 2b
 Moved Interrupt Vector Table to be compatible with bootloader.
 
 ### Version 2a
-Added support for Q83/84 family processors.  Implemented Interrupt Vector Table for K83 and Q83/84 processors.
+Added support for Q83/84 family processors.
+Implemented Interrupt Vector Table for K83 and Q83/84 processors.
 
 ### Version 1a
 Initial version, supporting K80 and K83 family processors.

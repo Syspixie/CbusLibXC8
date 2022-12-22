@@ -96,7 +96,7 @@ extern "C" {
 #define MODULE_MANUFACTURER MANU_MERG   // FlimConfig accepts limited values
 #define MODULE_ID 99                    // MERG module ID
 #define MODULE_TYPE_NAME "THING  "      // MERG module name (7 characters)
-#define MODULE_FLAGS PF_COMBI           // Producer & consumer
+#define MODULE_FLAGS (PF_COMBI | PF_BOOT)   // Producer & consumer; bootloader
 #define CPU_MANUFACTURER CPUM_MICROCHIP
 #define CBUS_BUS PB_CAN
 
@@ -105,14 +105,17 @@ extern "C" {
 #define MAX_NUM_EVENTS 32               // Max: 255
 #define EVENT_NUM_VARS 20               // Max: 255
 #define EVENT_HASH_SIZE 32
+#define EVENT_TRACK_NUM_VARS_USED       // Comment out if all vars deemed used
 
-// Timed response
-#define TIMEDRESPONSE_QUEUE_LENGTH 8    // Must be power of 2
-#define TIMEDRESPONSE_DELAY_MILLIS 10   // Time between successive messages
+// Queued messages
+#define TXMSG_QUEUE_LENGTH 8            // Must be power of 2
+#define TXMSG_DELAY_MILLIS 10           // Time between successive messages
 
-// CAN bus buffers
+#if defined(ECAN_BUFFERS_BASE_ADDRESS)
+// ECAN bus buffers
 #define RX_FIFO_LENGTH 8    // Must be power of 2
 #define TX_FIFO_LENGTH 8    // Must be power of 2
+#endif
 
 
 //******************************************************************************
@@ -121,7 +124,11 @@ extern "C" {
 // calculated from the definitions above
 
 
+#ifdef EVENT_TRACK_NUM_VARS_USED
 #define EVENT_SIZE (6 + EVENT_NUM_VARS)
+#else
+#define EVENT_SIZE (5 + EVENT_NUM_VARS)
+#endif
 
 // Bottom up...
 #define APPLICATION_BASE_ADDRESS 0x000800

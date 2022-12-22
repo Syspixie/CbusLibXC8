@@ -68,7 +68,7 @@
 #include "util.h"
 #include "module.h"
 #include "flash.h"
-#include "timedresponse.h"
+#include "txmsg.h"
 
 
 #define NO_INDEX 0xFF
@@ -89,7 +89,9 @@ typedef union {
         eventFlags_t flags;     // 0xFF indicates undefined (free) event entry
         bytes16_t nodeNumber;
         bytes16_t eventNumber;
+#ifdef EVENT_TRACK_NUM_VARS_USED
         uint8_t numVars;
+#endif
         uint8_t vars[EVENT_NUM_VARS];
     };
     uint8_t bytes[EVENT_SIZE];
@@ -255,7 +257,9 @@ static uint8_t doAddEvent(uint8_t eventIndex, uint16_t nodeNumber, uint16_t even
     event.flags.useMyNodeNumber = useMyNodeNumber;
     event.nodeNumber.value = nodeNumber;
     event.eventNumber.value = eventNumber;
+#ifdef EVENT_TRACK_NUM_VARS_USED
     event.numVars = 0;
+#endif
     utilMemset(event.vars, NULL_VAR, EVENT_NUM_VARS);
     writeFlashCached((flashAddr_t) &eventTable[eventIndex], &event, EVENT_SIZE);
 
@@ -278,11 +282,13 @@ static uint8_t doWriteEventVar(uint8_t eventIndex, uint8_t varIndex, uint8_t var
     // Just update the event
     writeFlashCached8((flashAddr_t) &eventTable[eventIndex].vars[varIndex], varValue);
 
+#ifdef EVENT_TRACK_NUM_VARS_USED
     // Update varsInUse if this variable number is larger
     uint8_t n = readFlashCached8((flashAddr_t) &eventTable[eventIndex].numVars);
     if (varIndex >= n) {
         writeFlashCached8((flashAddr_t) &eventTable[eventIndex].numVars, varIndex + 1);
     }
+#endif
 
     return 0;
 }
@@ -298,9 +304,11 @@ static uint8_t doWriteEventVar(uint8_t eventIndex, uint8_t varIndex, uint8_t var
  */
 static uint8_t doGetEventVar(uint8_t eventIndex, uint8_t varIndex, uint8_t* varValuePtr) {
 
+#ifdef EVENT_TRACK_NUM_VARS_USED
     // Check that the event variable has been written
     uint8_t inUse = readFlash8((flashAddr_t) &eventTable[eventIndex].numVars);
     if (varIndex >= inUse) return CMDERR_NO_EV;
+#endif
 
     // Read the value
     *varValuePtr = readFlash8((flashAddr_t) &eventTable[eventIndex].vars[varIndex]);
@@ -511,8 +519,13 @@ uint8_t getEventVarCount(uint8_t eventIndex, uint8_t* varCountPtr) {
     uint8_t err = checkEventIndex(eventIndex);
     if (err) return err;
 
+#ifdef EVENT_TRACK_NUM_VARS_USED
     // Get and return the number of event variables used
     *varCountPtr = readFlash8((flashAddr_t) &eventTable[eventIndex].numVars);
+#else
+    // Return the number of event variables
+    *varCountPtr = EVENT_NUM_VARS;
+#endif
     return 0;
 }
 
@@ -602,27 +615,26 @@ static void buildENRSP(uint8_t eventIndex) {
 }
 
 /**
- * A timedResponse function to send a series of ENRSP opcode responses, one for
- * each defined event.
+ * A txmsg function to send a series of ENRSP opcode responses, one for each
+ * defined event.
  * 
- * @param call Call number (0 to numCalls-1).
- * @param numCalls Total number of calls scheduled.
+ * @param eventIndex Next event index
+ * @param notused Not used.
  * @return 1: send response; 0: no response.
  * @post cbusMsg[] ENRSP response.
  */
-static int8_t timedResponseENRSP(uint8_t call, uint8_t numCalls) {
-
-    // Static variable for the last eventIndex used
-    static uint8_t eventIndex = 0;
-
-    // Initialise or update the index
-    eventIndex = (call == 0) ? 0 : eventIndex + 1;
+static int8_t txMsgENRSP(uint8_t eventIndex, uint8_t notused) {
 
     // Loop for all indexes
     while (eventIndex < MAX_NUM_EVENTS) {
 
-        // If an event, send the ENRSP response
+        // If an event...
         if (eventFlags[eventIndex].byte != 0xFF) {
+
+            // Queue next event
+            enqueueTXMsg(txMsgENRSP, eventIndex + 1, notused);
+
+            // Send the ENRSP response
             buildENRSP(eventIndex);
             return 1;
         }
@@ -630,8 +642,6 @@ static int8_t timedResponseENRSP(uint8_t call, uint8_t numCalls) {
         ++eventIndex;
     }
 
-    // Run of of events, so cancel any further timedResponse calls
-    cancelTimedResponse();
     return 0;
 }
 
@@ -697,12 +707,11 @@ int8_t opCodeNNEVN() {
  * @pre cbusMsg[] NERD message.
  * @return 0: no response.
  * 
- * @note ENRSP responses will be sent at regular intervals by timedResponse.
+ * @note ENRSP responses will be sent at regular intervals by txmsg.
  */
 int8_t opCodeNERD() {
 
-    uint8_t count = countEvents();
-    enqueueTimedResponse(timedResponseENRSP, count);
+    enqueueTXMsg(txMsgENRSP, 0, 0);
     return 0;
 }
 
