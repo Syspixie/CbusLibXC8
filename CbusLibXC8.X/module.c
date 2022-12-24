@@ -244,10 +244,8 @@ int8_t generateCbusMessage() {
     if (!tx) tx = processTXMsg();           // Process queued messages
     if (tx) return tx;
 
-    // Most applications operate in FLiM mode
-    if (interactState == interactStateFlim) {
 //        tx = appGenerateCbusMessage();      // Application outgoing messages
-    }
+
     return  tx;
 }
 
