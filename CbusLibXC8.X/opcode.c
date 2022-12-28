@@ -188,9 +188,9 @@ const op_t ops[]__at(OPCODES_TABLE_ADDRESS) = {
     {/* 0x50 */ NULL /* RQNN */, M_AddNN},          // Request node number
     {/* 0x51 */ NULL /* NNREL */, M_AddNN},         // Node number release
     {/* 0x52 */ NULL /* NNACK */, M_AddNN},         // Node number acknowledge
-    {/* 0x53 */ opCodeNNLRN, 0},                    // Set node into learn mode
-    {/* 0x54 */ opCodeNNULN, M_CheckNN | M_Learn},  // Release node from learn mode
-    {/* 0x55 */ opCodeNNCLR, M_CheckNN | M_Learn},  // Clear all events from a node
+    {/* 0x53 */ opCodeNNLRN, 0},                    // Set node into learn mode (allow code to checkNN)
+    {/* 0x54 */ opCodeNNULN, 0},                    // Release node from learn mode (allow code to checkNN)
+    {/* 0x55 */ opCodeNNCLR, M_CheckNN},            // Clear all events from a node
     {/* 0x56 */ opCodeNNEVN, M_CheckNN},            // Read number of events available in a node
     {/* 0x57 */ opCodeNERD, M_CheckNN},             // Read back all stored events in a node
     {/* 0x58 */ opCodeRQEVN, M_CheckNN},            // Request to read number of stored events
@@ -383,13 +383,16 @@ int8_t executeOpCode() {
 
     // Perform checks
     if (op.flags & M_CheckNN) {
+        // Ignore if not sent to us
         if (cbusMsg[1] != cbusNodeNumber.valueH || cbusMsg[2] != cbusNodeNumber.valueL) return 0;
     }
     if (op.flags & M_Setup) {
+        // Ignore if not in setup
         if (interactState != interactStateFlimSetup) return 0;
     }
     if (op.flags & M_Learn) {
-        if (interactState != interactStateFlimLearn) return -CMDERR_NOT_LRN;
+        // Ignore if not in learn
+        if (interactState != interactStateFlimLearn) return 0;
     }
 
     // Callback to application
