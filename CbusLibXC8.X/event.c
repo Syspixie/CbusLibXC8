@@ -696,7 +696,7 @@ int8_t opCodeNNULN() {
 int8_t opCodeNNCLR() {
 
     // For safety, must be in FLiM Learn mode
-    if (interactState != interactStateFlim) return -CMDERR_NOT_LRN;
+    if (interactState != interactStateFlimLearn) return -CMDERR_NOT_LRN;
 
     removeAllEvents();
     cbusMsg[0] = OPC_WRACK;
