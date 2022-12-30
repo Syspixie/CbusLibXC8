@@ -107,8 +107,11 @@ extern "C" {
     bool stallMemoryWrite(void);
     void enterFlimMode(void);
     void enterSlimMode(void);
-    bool validateNodeVar(uint8_t index, uint8_t oldValue, uint8_t newValue);
-    void nodeVarChanged(uint8_t index, uint8_t oldValue, uint8_t newValue);
+    bool validateNodeVar(uint8_t varIndex, uint8_t curValue, uint8_t newValue);
+    void nodeVarChanged(uint8_t varIndex, uint8_t oldValue, uint8_t curValue);
+    bool validateEventVar(uint8_t eventIndex, uint8_t varIndex, uint8_t curValue, uint8_t newValue);
+    void eventVarChanged(uint8_t eventIndex, uint8_t varIndex, uint8_t oldValue, uint8_t curValue);
+    void eventRemoved(uint8_t eventIndex);
 
 
 #ifdef	__cplusplus

@@ -77,7 +77,7 @@
  * 'generateCbusMessage' - called to allow the application to send an unprompted
  * message.
  * 
- * 'processCbusEvent' - called when an event 'on' or 'off' message has been
+ * 'processCbusEvent' - called when an event ON or OFF message has been
  * received.
  * 
  *      CALLBACKS
@@ -97,6 +97,12 @@
  * 'validateNodeVar' - called to validate the change to a node variable.
  * 
  * 'nodeVarChanged' - called when a node variable value has changed.
+ * 
+ * 'validateEventVar' - called to validate the change to an event variable.
+ * 
+ * 'eventVarChanged' - called when an event variable value has changed.
+ * 
+ * 'eventRemoved' - called when an event, or all events, removed
  * 
  *      INTERRUPT SERVIVCE ROUTINES
  * 
@@ -171,7 +177,7 @@ static void resetFlash(bool init) {
  * 
  * Should comprise setup code, followed by an infinite loop.
  */
-void processModule(void) {
+void processModule() {
 
     initEeprom();
     initFlash();
@@ -244,20 +250,20 @@ int8_t generateCbusMessage() {
     if (!tx) tx = processTXMsg();           // Process queued messages
     if (tx) return tx;
 
-//    tx = appGenerateCbusMessage();      // Application outgoing messages
+//    tx = appGenerateCbusMessage();          // Application outgoing messages
 
     return  tx;
 }
 
 /**
- * Called when an event on/off message is received.
+ * Called when an event ON or OFF message is received.
  * 
  * @pre cbusMsg[] incoming message.
  * @param eventIndex Index of event.
  * 
  * CBUS message data in cbusMsg[].
  * 
- *      cbusMsg[0] bit 0 gives event 'ON' (= 0) or 'OFF' (= 1).
+ *      cbusMsg[0] bit 0 gives event ON (= 0) or OFF (= 1).
  * 
  *      cbusMsg[0] bits 5:6 give number of additional data bytes (= 0..3)
  *      in cbusMsg[5..7].
@@ -333,23 +339,70 @@ void enterSlimMode() {
  * Called when a node variable change is requested.
  * 
  * @param varIndex Index of node variable.
- * @param oldValue Current NV value.
+ * @param curValue Current NV value.
  * @param newValue New NV value.
  * @return false to reject change (e.g invalid value).
  */
-bool validateNodeVar(uint8_t varIndex, uint8_t oldValue, uint8_t newValue) {
+bool validateNodeVar(uint8_t varIndex, uint8_t curValue, uint8_t newValue) {
 
-    return true;
+    bool ret = true;
+
+//    ret = appValidateNodeVar(varIndex, curValue, newValue);
+
+    return ret;
 }
 
 /**
  * Called when a node variable change has been made.
  * 
  * @param varIndex Index of node variable.
- * @param oldValue Current NV value.
- * @param newValue New NV value.
+ * @param oldValue Old NV value.
+ * @param curValue Current NV value.
  */
-void nodeVarChanged(uint8_t varIndex, uint8_t oldValue, uint8_t newValue) {
+void nodeVarChanged(uint8_t varIndex, uint8_t oldValue, uint8_t curValue) {
+
+//    appNodeVarChanged(varIndex, oldValue, curValue);
+}
+
+/**
+ * Called when an event variable change is requested.
+ * 
+ * @param eventIndex Index of event.
+ * @param varIndex Index of event variable.
+ * @param curValue Current EV value.
+ * @param newValue New EV value.
+ * @return false to reject change (e.g invalid value).
+ */
+bool validateEventVar(uint8_t eventIndex, uint8_t varIndex, uint8_t curValue, uint8_t newValue) {
+
+    bool ret = true;
+
+//    ret = appValidateEventVar(eventIndex, varIndex, curValue, newValue);
+
+    return ret;
+}
+
+/**
+ * Called when an event variable change has been made.
+ * 
+ * @param eventIndex Index of event.
+ * @param varIndex Index of event variable.
+ * @param oldValue Old EV value.
+ * @param curValue Current EV value.
+ */
+void eventVarChanged(uint8_t eventIndex, uint8_t varIndex, uint8_t oldValue, uint8_t curValue) {
+
+//    appEventVarChanged(eventIndex, varIndex, oldValue, curValue);
+}
+
+/**
+ * Called when an event is removed.
+ * 
+ * @param eventIndex Index of event, or 255 for all events.
+ */
+void eventRemoved(uint8_t eventIndex) {
+
+//    appEventRemoved(eventIndex);
 }
 
 
@@ -360,13 +413,13 @@ void nodeVarChanged(uint8_t varIndex, uint8_t oldValue, uint8_t newValue) {
 /**
  * Called on high priority interrupt.
  */
-void moduleHighPriorityIsr(void) {
+void moduleHighPriorityIsr() {
 }
 
 /**
  * Called on low priority interrupt.
  */
-void moduleLowPriorityIsr(void) {
+void moduleLowPriorityIsr() {
 
     // Process ECAN interrupts
     cbusCanIsr();
