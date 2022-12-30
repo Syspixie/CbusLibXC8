@@ -371,7 +371,7 @@ void cbusCanIsr() {
 /**
  * Performs regular CAN bus operations (called every millisecond).
  */
-void cbusCanTimerIsr(void) {
+void cbusCanTimerIsr() {
 
     // Call ECAN or CAN1 ISR
     canTimerIsr();

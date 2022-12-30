@@ -390,7 +390,7 @@ static void btnProgDebounceIsr() {
 /**
  * Performs regular interaction operations (called every millisecond).
  */
-void interactTimerIsr(void) {
+void interactTimerIsr() {
 
     static uint8_t toggle = 0;
 

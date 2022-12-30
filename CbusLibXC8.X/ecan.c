@@ -519,9 +519,9 @@ static void rxNextIsr() {
  * Called on ECAN receive message interrupt.
  */
 #if defined(IVT_BASE_ADDRESS)
-void __interrupt(irq(RXB1IF), base(IVT_BASE_ADDRESS), low_priority) ECAN_RXBnI_ISR(void) {
+void __interrupt(irq(RXB1IF), base(IVT_BASE_ADDRESS), low_priority) ECAN_RXBnI_ISR() {
 #else
-void ECAN_RXBnI_ISR(void) {
+void ECAN_RXBnI_ISR() {
 #endif
 
     // Loop for all used RX FIFO buffers, when room in the software FIFO
@@ -549,9 +549,9 @@ void ECAN_RXBnI_ISR(void) {
  * Called on ECAN transmit message interrupt.
  */
 #if defined(IVT_BASE_ADDRESS)
-void __interrupt(irq(TXB2IF), base(IVT_BASE_ADDRESS), low_priority) ECAN_TXBnI_ISR(void) {
+void __interrupt(irq(TXB2IF), base(IVT_BASE_ADDRESS), low_priority) ECAN_TXBnI_ISR() {
 #else
-void ECAN_TXBnI_ISR(void) {
+void ECAN_TXBnI_ISR() {
 #endif
 
     // Loop through TX buffers looking for the source of the interrupt
@@ -578,9 +578,9 @@ void ECAN_TXBnI_ISR(void) {
  * Called on ECAN FIFO high water interrupt.
  */
 #if defined(IVT_BASE_ADDRESS)
-void __interrupt(irq(RXB0IF), base(IVT_BASE_ADDRESS), low_priority) ECAN_FIFOWMI_ISR(void) {
+void __interrupt(irq(RXB0IF), base(IVT_BASE_ADDRESS), low_priority) ECAN_FIFOWMI_ISR() {
 #else
-void ECAN_FIFOWMI_ISR(void) {
+void ECAN_FIFOWMI_ISR() {
 #endif
 
     // It was found that allowing the hardware FIFO to fill up, and not have
@@ -607,9 +607,9 @@ void ECAN_FIFOWMI_ISR(void) {
  * Called on ECAN error interrupt.
  */
 #if defined(IVT_BASE_ADDRESS)
-void __interrupt(irq(ERRIF), base(IVT_BASE_ADDRESS), low_priority) ECAN_ERRI_ISR(void) {
+void __interrupt(irq(ERRIF), base(IVT_BASE_ADDRESS), low_priority) ECAN_ERRI_ISR() {
 #else
-void ECAN_ERRI_ISR(void) {
+void ECAN_ERRI_ISR() {
 #endif
 
     if (COMSTATbits.RXBNOVFL) {
@@ -627,9 +627,9 @@ void ECAN_ERRI_ISR(void) {
  * Called on ECAN invalid message interrupt.
  */
 #if defined(IVT_BASE_ADDRESS)
-void __interrupt(irq(IRXIF), base(IVT_BASE_ADDRESS), low_priority) ECAN_IRXI_ISR(void) {
+void __interrupt(irq(IRXIF), base(IVT_BASE_ADDRESS), low_priority) ECAN_IRXI_ISR() {
 #else
-void ECAN_IRXI_ISR(void) {
+void ECAN_IRXI_ISR() {
 #endif
 
 #ifdef INCLUDE_CBUS_CAN_STATS

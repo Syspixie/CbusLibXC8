@@ -98,7 +98,7 @@ cacheStatus_t cacheStatus;      // Cache status flags
 /**
  * Initialises the FLASH interface.
  */
-void initFlash(void) {
+void initFlash() {
 
     cacheStatus.flags = 0;
 }

@@ -284,7 +284,7 @@ bool can1Receive(bytes16_t* stdID, bool* isRtr, uint8_t* dataLen) {
 // <editor-fold defaultstate="expanded" desc="Interrupt service routines">
 
 
-void __interrupt(irq(CAN), base(IVT_BASE_ADDRESS), low_priority) CAN1_ISR(void) {
+void __interrupt(irq(CAN), base(IVT_BASE_ADDRESS), low_priority) CAN1_ISR() {
 
     if (1 == C1INTHbits.IVMIF) {
         //CAN1_InvalidMessageHandler();
