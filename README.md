@@ -16,6 +16,10 @@ Code to provide bootloader functionality for a CbusLibXC8 application.
 
 # Revision History
 
+### Version 2d
+Added validateEventVar, eventVarChanged and eventRemoved callbacks.
+Added produceEvent function to support 'happenings'.
+
 ### Version 2c
 Allow optimisation of event handling by assuming all event variables are used.
 Replaced timedresponse with txmsg to provide more flexibility in queueing output messages.
