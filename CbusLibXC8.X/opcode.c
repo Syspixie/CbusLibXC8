@@ -104,7 +104,7 @@ typedef struct {
     uint8_t flags;
 } op_t;
 
-const op_t ops[] __at(OPCODES_TABLE_ADDRESS) = {
+const __section("constSec") op_t ops[] = {
     {/* 0x00 */ NULL, 0},
     {/* 0x01 */ NULL, 0},
     {/* 0x02 */ NULL, 0},

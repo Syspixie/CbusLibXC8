@@ -71,11 +71,11 @@ The application can then be built.
        Loading -> Add loadable file -> {select the .hex file of the appropriate bootloader}
        XC8 Compiler -> Optimisations -> Optimisation level -> 2
        XC8 Linker -> Additional options -> Codeoffset -> 0x0800
-                                           Extra linker options -> Wl,-Pmediumconst=848h
+                                           Extra linker options -> -Wl,-Pmediumconst=848h
 
 *Optimisation level is optional*  
 *Codeoffset* 0x0800 *places the application above the bootloader in memory*  
-Wl,-Pmediumconst=848h *tells the linker to put constant data at a fixed location in lower memory, rather
+-Wl,-Pmediumconst=848h *tells the linker to put constant data at a fixed location in lower memory, rather
 than at the end of memory (which is required for application data)*
 
 The required output is a *.unified.hex* file, which contains the bootloader and the application.
