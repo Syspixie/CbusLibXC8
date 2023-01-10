@@ -186,7 +186,7 @@ void processModule() {
     if (readEeprom8(EEPROM_VERSION) != CURRENT_EEPROM_VERSION) {
         resetEeprom(true);
     }
-    if (flashVersion != CURRENT_FLASH_VERSION) {
+    if (readFlashCached8((flashAddr_t) &flashVersion) != CURRENT_FLASH_VERSION) {
         resetFlash(true);
     }
 
