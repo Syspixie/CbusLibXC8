@@ -80,12 +80,17 @@
 void __section("mainSec") main() {
 
 #if defined(CPU_FAMILY_PIC18_K80)
+    OSCTUNEbits.PLLEN = 1;          // Enable PLL
     RCONbits.IPEN = 1;              // Enable high/low interrupt priorities
 #endif
 #if defined(CPU_FAMILY_PIC18_K83)
+    OSCCON1bits.NOSC = 0b010;       // Enable PLL
+    while(!OSCSTATbits.PLLR) {}     // Wait for PLL to settle
     INTCON0bits.IPEN = 1;           // Enable high/low interrupt priorities
 #endif
 #if defined(CPU_FAMILY_PIC18_Q83Q84)
+    OSCCON1bits.NOSC = 0b010;       // Enable PLL
+    while(!OSCSTATbits.PLLR) {}     // Wait for PLL to settle
     INTCON0bits.IPEN = 1;           // Enable high/low interrupt priorities
 #endif
 

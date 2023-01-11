@@ -75,8 +75,8 @@
 #pragma config XINST = OFF      // Extended Instruction Set (Disabled)
 
 // CONFIG1H
-#pragma config FOSC = HS1       // Oscillator (HS oscillator (Medium power, 4 MHz - 16 MHz))
-#pragma config PLLCFG = ON      // PLL x4 Enable bit (Enabled)
+#pragma config FOSC = HS2       // Oscillator->HS oscillator (High power, 16 MHz - 25 MHz)
+#pragma config PLLCFG = OFF     // PLL x4 Enable bit->Disabled
 #pragma config FCMEN = OFF      // Fail-Safe Clock Monitor (Disabled)
 #pragma config IESO = OFF       // Internal External Oscillator Switch Over Mode (Disabled)
 
@@ -135,12 +135,12 @@
 
 // CONFIG1L
 #pragma config FEXTOSC = HS     // External Oscillator Selection->HS (crystal oscillator) above 8 MHz; PFM set to high power
-#pragma config RSTOSC = EXTOSC_4PLL // Reset Oscillator Selection->EXTOSC with 4x PLL, with EXTOSC operating per FEXTOSC bits
+#pragma config RSTOSC = EXTOSC  // Reset Oscillator Selection->EXTOSC operating per FEXTOSC bits (device manufacturing default)
 
 // CONFIG1H
 #pragma config CLKOUTEN = OFF   // Clock out Enable bit->CLKOUT function is disabled
 #pragma config PR1WAY = OFF     // PRLOCKED One-Way Set Enable bit->PRLOCK bit can be set and cleared repeatedly
-#pragma config CSWEN = OFF      // Clock Switch Enable bit->The NOSC and NDIV bits cannot be changed by user software
+#pragma config CSWEN = ON       // Clock Switch Enable bit->Writing to NOSC and NDIV is allowed
 #pragma config FCMEN = OFF      // Fail-Safe Clock Monitor Enable bit->Fail-Safe Clock Monitor disabled
 
 // CONFIG2L
@@ -189,7 +189,7 @@
 
 // CONFIG1
 #pragma config FEXTOSC = HS     // External Oscillator Selection->HS (crystal oscillator) above 8 MHz
-#pragma config RSTOSC = EXTOSC_4PLL // Reset Oscillator Selection->EXTOSC with 4x PLL, with EXTOSC operating per FEXTOSC bits
+#pragma config RSTOSC = EXTOSC  // Reset Oscillator Selection->EXTOSC operating per FEXTOSC bits (device manufacturing default)
 
 // CONFIG2
 #pragma config CLKOUTEN = OFF   // Clock out Enable bit->CLKOUT function is disabled

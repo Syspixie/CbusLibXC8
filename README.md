@@ -16,6 +16,10 @@ Code to provide bootloader functionality for a CbusLibXC8 application.
 
 # Revision History
 
+### Version 2e
+Changed K80 oscillator from medium (HS1) to high (HS2) power.
+To support legacy configurations, modified all processors to execute the bootloader at base oscillator frequency (16MHz), and to switch on PLL mode (64MHz) at the start of application code.
+
 ### Version 2d
 Added validateEventVar, eventVarChanged and eventRemoved callbacks.
 Added produceEvent function to support 'happenings'.
