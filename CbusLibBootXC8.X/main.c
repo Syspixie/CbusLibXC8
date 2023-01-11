@@ -638,7 +638,7 @@ void main() __at(0x0020) {
     RXF0SIDH = 0b00000000;
     RXF0SIDL = 0b00001000;
 
-    BRGCON1 = 0b00001111;   // Sync 1xTQ; Baud rate 125kbps
+    BRGCON1 = 0b00000011;   // Sync 1xTQ; Baud rate 125kbps
     BRGCON2 = 0b10011110;   // Segment 1 4xTQ; propagation 7xTQ
     BRGCON3 = 0b00000011;   // Segment 2 4xTQ
 
@@ -665,10 +665,10 @@ void main() __at(0x0020) {
     C1CONH = 0x97;      // ON enabled; FRZ disabled; SIDL disabled; BRSDIS enabled; WFT T11 Filter; WAKFIL enabled;
     C1CONU = 0x10;      // TXQEN enabled; STEF disabled; SERR2LOM disabled; ESIGM disabled; RTXAT disabled;
 
-    C1NBTCFGL = 0x02;   // SJW 2;
-    C1NBTCFGH = 0x02;   // TSEG2 2;
-    C1NBTCFGU = 0x03;   // TSEG1 3;
-    C1NBTCFGT = 0x3F;   // BRP 63;
+    C1NBTCFGL = 0x2F;   // SJW 47;
+    C1NBTCFGH = 0x2F;   // TSEG2 47;
+    C1NBTCFGU = 0x4E;   // TSEG1 78;
+    C1NBTCFGT = 0x00;   // BRP 0;
 
     C1TXQCONL = 0x00;   // TXATIE disabled; TXQEIE disabled; TXQNIE disabled;
     C1TXQCONH = 0x04;   // FRESET enabled; UINC disabled;
