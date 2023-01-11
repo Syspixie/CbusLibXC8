@@ -136,8 +136,6 @@ extern "C" {
 #define PARAMETER_BLOCK_ADDRESS (APPLICATION_BASE_ADDRESS + 32)     // 0x000820
 // Leave space for parameter block
 #define MODULE_TYPE_NAME_ADDRESS (PARAMETER_BLOCK_ADDRESS + 32)     // 0x000840
-// Leave space for module type name, and a bit spare
-#define OPCODES_TABLE_ADDRESS (MODULE_TYPE_NAME_ADDRESS + 8 + 8)    // 0x000850
 
 // Top down...
 // Put flashVersion on the first word boundary below top
