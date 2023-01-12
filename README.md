@@ -18,16 +18,21 @@ Code to provide bootloader functionality for a CbusLibXC8 application.
 
 ### Version 2e
 Changed K80 oscillator from medium (HS1) to high (HS2) power.
+
 To support legacy configurations, modified all processors to execute the bootloader at base oscillator frequency (16MHz), and to switch on PLL mode (64MHz) at the start of application code.
 
 ### Version 2d
 Added validateEventVar, eventVarChanged and eventRemoved callbacks.
+
 Added produceEvent function to support 'happenings'.
 
 ### Version 2c
 Allow optimisation of event handling by assuming all event variables are used.
+
 Replaced timedresponse with txmsg to provide more flexibility in queueing output messages.
+
 Corrected opcode flags (check node number, add node number) for event opcodes.
+
 Corrected CAN1 buffer transmit sequence.
 
 ### Version 2b
@@ -35,6 +40,7 @@ Moved Interrupt Vector Table to be compatible with bootloader.
 
 ### Version 2a
 Added support for Q83/84 family processors.
+
 Implemented Interrupt Vector Table for K83 and Q83/84 processors.
 
 ### Version 1a
@@ -51,6 +57,20 @@ Initial version, supporting K80 and K83 family processors.
 - MERG CANUSB CAN bus USB interface
 - MERG CANGIZMO CBUS module bench tester
 - MERG FLiM Configuration Utility (v1.4.7.54)
+
+## Defining 'const' variables
+The XC8 linker tries to locate all const data at the highest memory locations available.  This causes the bootloader
+programming function to write **every** memory location, including all the unused memory between top of code and start
+of const data. Bootloader programming becomes unnecessarily slow.
+
+To stop this happening, all const data should be put in its own psect using the __section() macro *(note: two leading underscores)*.
+For example:
+```
+const __section("constSec") uint8_t lookup[] = {3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 6};
+```
+
+Even with this done, the linker puts an 'empty' psect called "mediumconst", containing two bytes of data, at the end of memory.
+This can be moved using the 'Extra linker options' described below.
 
 ## Project properties
 Hidden in each project's configuration files are some important settings which are vital
@@ -79,7 +99,7 @@ The application can then be built.
 
 *Optimisation level is optional*  
 *Codeoffset* 0x0800 *places the application above the bootloader in memory*  
--Wl,-Pmediumconst=848h *tells the linker to put constant data at a fixed location in lower memory, rather
-than at the end of memory (which is required for application data)*
+-Wl,-Pmediumconst=848h *tells the linker to put const data at a fixed location in lower memory, rather
+than at the highest memory locations available*
 
 The required output is a *.unified.hex* file, which contains the bootloader and the application.
